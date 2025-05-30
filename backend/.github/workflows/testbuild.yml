@@ -1,0 +1,30 @@
+name: Test and Build
+
+on:
+  push:           # Runs on every push to any branch
+    branches: ['*']
+
+jobs:
+  test-and-build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: 📥 Checkout code
+        uses: actions/checkout@v3
+
+      - name: 🟢 Setup Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: 18
+
+      - name: 📦 Install dependencies
+        run: npm ci
+
+      - name: 🧹 Lint code
+        run: npm run lint
+
+      - name: 🛠️ Build project
+        run: npm run build
+
+      - name: ✅ All steps passed
+        run: echo "Build and lint successful!"
