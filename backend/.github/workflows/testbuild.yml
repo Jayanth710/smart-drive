@@ -28,3 +28,6 @@ jobs:
 
       - name: ✅ All steps passed
         run: echo "Build and lint successful!"
+
+      - name: ✅ Run tests
+        run: npm test
