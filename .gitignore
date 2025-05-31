@@ -16,3 +16,5 @@ yarn-error.log*
 # Environment variables
 .env
 .env.*
+
+smartdrive-service-account.json
