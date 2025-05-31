@@ -22,3 +22,6 @@ steps:
 
 images:
   - us-central1-docker.pkg.dev/smartdrive-461502/smartdrive-repo/smartdrive-backend
+
+options:
+  logging: CLOUD_LOGGING_ONLY
