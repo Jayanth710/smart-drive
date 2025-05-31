@@ -1,0 +1,24 @@
+steps:
+  # Step 1: Build the Docker image
+  - name: 'gcr.io/cloud-builders/docker'
+    args: ['build', '-t', 'us-central1-docker.pkg.dev/smartdrive-461502/smartdrive-repo/smartdrive-backend', '.']
+
+  # Step 2: Push the image to Artifact Registry
+  - name: 'gcr.io/cloud-builders/docker'
+    args: ['push', 'us-central1-docker.pkg.dev/smartdrive-461502/smartdrive-repo/smartdrive-backend']
+
+  # Step 3: Deploy to Cloud Run
+  - name: 'gcr.io/google.com/cloudsdktool/cloud-sdk'
+    entrypoint: gcloud
+    args:
+      - run
+      - deploy
+      - smartdrive-backend
+      - --image=us-central1-docker.pkg.dev/smartdrive-461502/smartdrive-repo/smartdrive-backend
+      - --region=us-central1
+      - --platform=managed
+      - --allow-unauthenticated
+      - --port=4000
+
+images:
+  - us-central1-docker.pkg.dev/smartdrive-461502/smartdrive-repo/smartdrive-backend
