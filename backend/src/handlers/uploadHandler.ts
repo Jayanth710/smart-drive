@@ -1,6 +1,7 @@
 import { Router, Response, Request } from 'express';
 import multer from 'multer';
 import { uploadFileToGCS } from '../utils/gcsUpload.js';
+import { publishFileMetadata } from '../utils/pubsub.js';
 
 const uploadRouter = Router();
 export const upload = multer({ storage: multer.memoryStorage() });
@@ -12,6 +13,8 @@ export const handleFileUpload = async (req: Request, res: Response): Promise<voi
       if (!file) res.status(400).send('No file uploaded');
   
       const gcsUrl = await uploadFileToGCS(file);
+
+      publishFileMetadata(file, gcsUrl)
   
       res.status(200).json({
         message: 'File uploaded successfully',

@@ -1,18 +1,22 @@
 import { Storage } from '@google-cloud/storage';
 import { v4 as uuidv4 } from 'uuid';
-// import path from 'path';
-// import { fileURLToPath } from 'url';
+import path from 'path';
+import { fileURLToPath } from 'url';
+import dotenv from 'dotenv';
+dotenv.config();
 
-// const __filename = fileURLToPath(import.meta.url);
-// const __dirname = path.dirname(__filename);
-// const serviceKeyPath = path.join(__dirname, '../../smartdrive-service-account.json');
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+const serviceKeyPath = path.join(__dirname, '../../smartdrive-service-account.json');
+
+const isLocal = process.env.NODE_ENV === 'local';
 // { keyFilename: serviceKeyPath}
-const storage = new Storage();
+const storage = isLocal ? new Storage({ keyFilename: serviceKeyPath }) : new Storage();
 const bucket = storage.bucket('smartdrive_storage');
 
 export const uploadFileToGCS = async (file: Express.Multer.File): Promise<string> => {
   return new Promise((resolve, reject) => {
-    const fileName = `${Date.now()}-${uuidv4()}-${file.originalname}`;
+    const fileName = `${Date.now()}-${uuidv4()}-${file.originalname.replace(/\s+/g, '_')}`;
     const blob = bucket.file(fileName);
 
     const blobStream = blob.createWriteStream({

@@ -1,0 +1,29 @@
+import io
+from google.cloud import storage
+import os
+from helper_functions.file_extractor import extract_data_from_pdf
+from google.oauth2 import service_account
+
+credentials = service_account.Credentials.from_service_account_file(
+    "smartdrive-service-account.json"
+)
+def download_from_gcs(gcs_url: str, file_name: str, output_dir="uploads") -> str:
+    # Parse bucket and blob from URL
+    parts = gcs_url.split("/")
+    bucket_name = parts[3]
+    blob_name = "/".join(parts[4:])
+
+    os.makedirs(output_dir, exist_ok=True)
+    output_path = os.path.join(output_dir, file_name)
+
+    # Initialize GCS client
+    client = storage.Client(credentials=credentials)
+    bucket = client.bucket(bucket_name)
+    blob = bucket.blob(blob_name)
+
+    # Download file
+    blob.download_to_filename(output_path)
+    print(f"📥 Downloaded {file_name} to {output_path}")
+    extract_data_from_pdf(output_path)
+
+    return output_path
