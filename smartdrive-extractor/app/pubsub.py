@@ -11,11 +11,12 @@ project_id = "smartdrive-461502"
 subscription_id = "smartdrive-data-extract-sub"
 
 isLocal = os.getenv("NODE_ENV")
-if(isLocal!='dev'):
-    credentials = None
-else:
+if(isLocal=='dev'):
     credentials = service_account.Credentials.from_service_account_file(
     "smartdrive-service-account.json")
+else:
+    credentials = None
+    
 
 
 # Define the callback that handles incoming messages
