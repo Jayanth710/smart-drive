@@ -48,7 +48,10 @@ def callback(message: pubsub_v1.subscriber.message.Message) -> None:
 def pubsub():
     """Starts the Pub/Sub subscriber and blocks until an error occurs."""
     # The client is initialized without any credentials parameter.
-    subscriber = pubsub_v1.SubscriberClient(credentials=credentials)
+    if(credentials is None):
+        subscriber = pubsub_v1.SubscriberClient()
+    else:
+        subscriber = pubsub_v1.SubscriberClient(credentials=credentials)
     subscription_path = subscriber.subscription_path(project_id, subscription_id)
 
     streaming_pull_future = subscriber.subscribe(subscription_path, callback=callback)

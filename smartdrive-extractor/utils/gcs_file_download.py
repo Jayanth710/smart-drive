@@ -23,6 +23,10 @@ def download_from_gcs(gcs_url: str, file_name: str, output_dir="uploads") -> str
     output_path = os.path.join(output_dir, file_name)
 
     # Initialize GCS client
+    if(credentials is None):
+        client = storage.Client()
+    else:
+        client = storage.Client(credentials=credentials)
     client = storage.Client(credentials=credentials)
     bucket = client.bucket(bucket_name)
     blob = bucket.blob(blob_name)
