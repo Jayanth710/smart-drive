@@ -1,6 +1,7 @@
 steps:
   # Step 1: Build the Docker image
   - name: 'gcr.io/cloud-builders/docker'
+    dir: 'smartdrive-extractor'
     args: ['build', '-t', 'us-central1-docker.pkg.dev/smartdrive-461502/smartdrive-repo/smartdrive-extractor', '.']
 
   # Step 2: Push the image to Artifact Registry

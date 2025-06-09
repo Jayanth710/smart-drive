@@ -1,6 +1,7 @@
 steps:
   # Step 1: Build the Docker image
   - name: 'gcr.io/cloud-builders/docker'
+    dir: 'backend'
     args: ['build', '-t', 'us-central1-docker.pkg.dev/smartdrive-461502/smartdrive-repo/smartdrive-backend', '.']
 
   # Step 2: Push the image to Artifact Registry
