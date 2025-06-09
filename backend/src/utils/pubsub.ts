@@ -17,7 +17,7 @@ export const setupPubSub = async () => {
         const [topic] = await pubsub.createTopic(topicName);
         console.log(`✅ Topic ${topic.name} created.`);
     } catch (err: unknown) {
-        if (err instanceof Error && 'code' in err && (err as any).code === 6) {
+        if (err instanceof Error && 'code' in err && (err as {code: number}).code === 6) {
             console.log(`ℹ️ Topic ${topicName} already exists.`);
         } else {
             throw err;
@@ -29,7 +29,7 @@ export const setupPubSub = async () => {
             console.log(`✅ Subscription ${subscription.name} created.`);
         }
         catch (err: unknown) {
-            if (err instanceof Error && 'code' in err && (err as any).code === 6) {
+            if (err instanceof Error && 'code' in err && (err as {code: number}).code === 6) {
                 console.log(`ℹ️ Subscription ${subscriptionName} already exists.`);
             } else {
                 throw err;
