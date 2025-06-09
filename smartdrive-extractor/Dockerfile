@@ -21,7 +21,7 @@ COPY . .
 RUN uv pip install --system -r requirements.txt
 
 # Expose port (only needed if it’s a web server)
-# EXPOSE 8080
+EXPOSE 8080
 
 # Define entrypoint
 CMD ["uv", "run", "main.py"]
