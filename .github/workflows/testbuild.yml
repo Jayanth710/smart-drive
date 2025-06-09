@@ -37,8 +37,7 @@ name: Deploy Services to Google Cloud
 
 on:
   push:
-    branches:
-      - main
+    branches: ['*']
 
 env:
   PROJECT_ID: ${{ secrets.GCP_PROJECT_ID }}
