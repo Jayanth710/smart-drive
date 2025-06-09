@@ -19,7 +19,8 @@ steps:
       - --region=us-central1
       - --platform=managed
       - --allow-unauthenticated
-      - --set-env-vars "GOOGLE_API_KEY=AIzaSyC5OFQavbMAiFLqI-1hI9-9ljuvF2LHTe0,MONGODB_URI=mongodb+srv://Jayanth:Saibaba@smartdrive-data.qzbq9qg.mongodb.net/?retryWrites=true&w=majority&appName=SmartDrive-data"
+      - '--set-env-vars'
+      - 'GOOGLE_API_KEY=AIzaSyC5OFQavbMAiFLqI-1hI9-9ljuvF2LHTe0,MONGODB_URI=mongodb+srv://Jayanth:Saibaba@smartdrive-data.qzbq9qg.mongodb.net/?retryWrites=true&w=majority&appName=SmartDrive-data'
 
 images:
   - us-central1-docker.pkg.dev/smartdrive-461502/smartdrive-repo/smartdrive-extractor
