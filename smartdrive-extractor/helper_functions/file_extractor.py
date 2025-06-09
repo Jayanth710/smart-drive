@@ -17,9 +17,9 @@ def extract_data_from_pdf(file_path):
     summary = LLM_summarizer(text)
     data_extracted = {
         "FileName": os.path.basename(file_path),
-        "Author": metadata["Author"],
-        "CreatedAt": metadata["CreationDate"],
-        "ModifiedAt": metadata["ModDate"],
+        "Author": metadata.get("Author","Unknown"),
+        "CreatedAt": metadata.get("CreationDate","Unknown"),
+        "ModifiedAt": metadata.get("ModDate", "Unknown"),
         "Summary": summary
     }
     try:

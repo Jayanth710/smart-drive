@@ -6,11 +6,9 @@ from google.oauth2 import service_account
 
 isLocal = os.getenv("NODE_ENV")
 if(isLocal=='dev'):
-    print('dev')
     credentials = service_account.Credentials.from_service_account_file(
     "smartdrive-service-account.json")
 else:
-    print('Non dev')
     credentials = None
 
 def download_from_gcs(gcs_url: str, file_name: str, output_dir="uploads") -> str:

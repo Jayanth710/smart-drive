@@ -12,11 +12,9 @@ subscription_id = "smartdrive-data-extract-sub"
 
 isLocal = os.getenv("NODE_ENV")
 if(isLocal=='dev'):
-    print('dev')
     credentials = service_account.Credentials.from_service_account_file(
     "smartdrive-service-account.json")
 else:
-    print('Non dev')
     credentials = None
     
 
@@ -48,21 +46,18 @@ def callback(message: pubsub_v1.subscriber.message.Message) -> None:
 def pubsub():
     """Starts the Pub/Sub subscriber and blocks until an error occurs."""
     # The client is initialized without any credentials parameter.
-    if(credentials is None):
-        subscriber = pubsub_v1.SubscriberClient()
-    else:
-        subscriber = pubsub_v1.SubscriberClient(credentials=credentials)
-    subscription_path = subscriber.subscription_path(project_id, subscription_id)
-
-    streaming_pull_future = subscriber.subscribe(subscription_path, callback=callback)
-    logger.info(f"🚀 Listening for messages on {subscription_path}...")
-
     try:
-        streaming_pull_future.result()
+        if(credentials is None):
+            subscriber = pubsub_v1.SubscriberClient()
+        else:
+            subscriber = pubsub_v1.SubscriberClient(credentials=credentials)
+        subscription_path = subscriber.subscription_path(project_id, subscription_id)
+
+        subscriber.subscribe(subscription_path, callback=callback)
+        logger.info(f"🚀 Listening for messages on {subscription_path}...")
+
     except Exception as e:
         logger.error(
             f"Listening for messages on {subscription_path} has stopped.",
             exc_info=True
         )
-
-        streaming_pull_future.cancel()
