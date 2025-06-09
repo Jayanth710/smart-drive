@@ -4,9 +4,15 @@ import os
 from helper_functions.file_extractor import extract_data_from_pdf
 from google.oauth2 import service_account
 
-credentials = service_account.Credentials.from_service_account_file(
-    "smartdrive-service-account.json"
-)
+isLocal = os.getenv("NODE_ENV")
+if(isLocal=='dev'):
+    print('dev')
+    credentials = service_account.Credentials.from_service_account_file(
+    "smartdrive-service-account.json")
+else:
+    print('Non dev')
+    credentials = None
+
 def download_from_gcs(gcs_url: str, file_name: str, output_dir="uploads") -> str:
     # Parse bucket and blob from URL
     parts = gcs_url.split("/")

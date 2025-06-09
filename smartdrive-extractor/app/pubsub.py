@@ -12,9 +12,11 @@ subscription_id = "smartdrive-data-extract-sub"
 
 isLocal = os.getenv("NODE_ENV")
 if(isLocal=='dev'):
+    print('dev')
     credentials = service_account.Credentials.from_service_account_file(
     "smartdrive-service-account.json")
 else:
+    print('Non dev')
     credentials = None
     
 
