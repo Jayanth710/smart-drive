@@ -17,8 +17,6 @@ if(isLocal=='dev'):
 else:
     credentials = None
     
-
-
 # Define the callback that handles incoming messages
 def callback(message: pubsub_v1.subscriber.message.Message) -> None:
     """Processes a single Pub/Sub message."""
@@ -53,8 +51,18 @@ def pubsub():
             subscriber = pubsub_v1.SubscriberClient(credentials=credentials)
         subscription_path = subscriber.subscription_path(project_id, subscription_id)
 
-        subscriber.subscribe(subscription_path, callback=callback)
+        subscriber_stream = subscriber.subscribe(subscription_path, callback=callback)
         logger.info(f"🚀 Listening for messages on {subscription_path}...")
+
+        try:
+            subscriber_stream.result()
+        except Exception as e:
+            logger.error(
+                f"Listening for messages on {subscription_path} has stopped.",
+                exc_info=True
+            )
+            
+            subscriber_stream.cancel()
 
     except Exception as e:
         logger.error(
