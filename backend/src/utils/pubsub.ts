@@ -38,30 +38,6 @@ export const setupPubSub = async () => {
     }
 };
 
-// export const subscribeToMessages = () => {
-//     const subscription = pubsub.subscription(subscriptionName);
-
-//     subscription.on('message', (message) => {
-//         console.log('📩 Received message:', message.data.toString());
-
-//         // Optional: Parse JSON
-//         try {
-//             const parsed = JSON.parse(message.data.toString());
-//             console.log('📦 Parsed Message:', parsed);
-//         } catch (err: unknown) {
-//             console.warn('⚠️ Could not parse message:', message.data.toString());
-//         }
-
-//         message.ack();
-//     });
-
-//     subscription.on('error', (error) => {
-//         console.error('❌ Subscription error:', error);
-//     });
-
-//     console.log(`👂 Subscribed to ${subscriptionName}`);
-// };
-
 
 export const publishFileMetadata = async (file: Express.Multer.File, fileUrl: string) => {
     const topic = pubsub.topic(topicName);
