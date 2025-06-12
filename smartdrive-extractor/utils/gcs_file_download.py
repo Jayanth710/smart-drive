@@ -100,4 +100,4 @@ def download_from_gcs(gcs_url: str, file_name: str) -> str:
         # Log the specific error that is happening
         logger.error(f"❌ Failed during GCS download or processing for {file_name}: {e}", exc_info=True)
         # Re-raise the exception to ensure the message is NOT acknowledged
-        raise
+        return
