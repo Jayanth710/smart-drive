@@ -22,6 +22,7 @@ backend/smartdrive-service-account.json
 
 # Python
 /smartdrive-extractor/__pycache__/
+/smartdrive-extractor/**/__pycache__/
 /smartdrive-extractor/*.py[cod]
 /smartdrive-extractor/$py.class
 /smartdrive-extractor/.env

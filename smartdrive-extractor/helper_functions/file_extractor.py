@@ -9,6 +9,12 @@ collection = db["summaries"]
 
 def extract_data_from_pdf(file_path):
     """Extract data from a PDF file."""
+    file_name = os.path.basename(file_path)
+    _, file_extension = os.path.splitext(file_name)
+
+    if file_extension.lower() != '.pdf':
+        print("Not PD")
+        return
     loader = PDFPlumberLoader(file_path)
     docs = loader.load()
     metadata = docs[0].metadata
