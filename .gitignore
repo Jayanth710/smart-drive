@@ -15,15 +15,13 @@ backend/yarn-error.log*
 
 # Environment variables
 backend/.env
-backend/.env.*
-
-backend/smartdrive-service-account.json
 
 
 # Python
-/smartdrive-extractor/uploads/
+smartdrive-extractor/uploads/
 # Python bytecode
 **/__pycache__/
+**/*.pyc
 **/*.py[cod]
 **/$py.class
 
