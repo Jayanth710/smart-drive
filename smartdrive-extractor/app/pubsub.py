@@ -17,7 +17,6 @@ if(isLocal=='dev'):
 else:
     credentials = None
     
-# Define the callback that handles incoming messages
 def callback(message: pubsub_v1.subscriber.message.Message) -> None:
     """Processes a single Pub/Sub message."""
     try:
@@ -43,7 +42,6 @@ def callback(message: pubsub_v1.subscriber.message.Message) -> None:
 
 def pubsub():
     """Starts the Pub/Sub subscriber and blocks until an error occurs."""
-    # The client is initialized without any credentials parameter.
     try:
         if(credentials is None):
             subscriber = pubsub_v1.SubscriberClient()

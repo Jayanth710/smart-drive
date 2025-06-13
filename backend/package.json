@@ -95,6 +95,7 @@
     "undici-types": "^6.21.0",
     "uuid": "^11.1.0",
     "v8-compile-cache-lib": "^3.0.1",
+    "winston": "^3.17.0",
     "wrappy": "^1.0.2",
     "xtend": "^4.0.2",
     "yn": "^3.1.1"

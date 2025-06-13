@@ -21,15 +21,16 @@ backend/smartdrive-service-account.json
 
 
 # Python
-/smartdrive-extractor/__pycache__/
-/smartdrive-extractor/**/__pycache__/
-/smartdrive-extractor/*.py[cod]
-/smartdrive-extractor/$py.class
-/smartdrive-extractor/.env
-/smartdrive-extractor/venv/
-/smartdrive-extractor/.venv/
-/smartdrive-extractor/env/
-/smartdrive-extractor/smartdrive-service-account.json
+/smartdrive-extractor/uploads/
+# Python bytecode
+**/__pycache__/
+**/*.py[cod]
+**/$py.class
+
+# Environment & credentials
+**/.env
+**/.venv/
+**/smartdrive-service-account.json
 
 # IDE and OS files
 .idea/

@@ -21,9 +21,6 @@ def create_app(env: Environment = Environment.from_env()) -> Flask:
     app = Flask(__name__)
     # CORS(app, supports_credentials=True)
     # app.secret_key = "a9b8c7d6e5f4g3h2i1j0"
-    
-    # Run the Pub/Sub listener in a background thread
-    # This prevents it from blocking the main Flask application
     listener_thread = threading.Thread(target=run_background_listener, daemon=True)
     listener_thread.start()
     
