@@ -1,61 +1,31 @@
-# steps:
-#   # Step 1: Build the Docker image
-#   - name: 'gcr.io/cloud-builders/docker'
-#     dir: 'backend'
-#     args: ['build', '-t', 'us-central1-docker.pkg.dev/smartdrive-461502/smartdrive-repo/smartdrive-backend', '.']
-
-#   # Step 2: Push the image to Artifact Registry
-#   - name: 'gcr.io/cloud-builders/docker'
-#     args: ['push', 'us-central1-docker.pkg.dev/smartdrive-461502/smartdrive-repo/smartdrive-backend']
-
-#   # Step 3: Deploy to Cloud Run
-#   - name: 'gcr.io/google.com/cloudsdktool/cloud-sdk'
-#     entrypoint: gcloud
-#     args:
-#       - 'run'
-#       - 'deploy'
-#       - 'smartdrive-backend'
-#       - '--image=us-central1-docker.pkg.dev/smartdrive-461502/smartdrive-repo/smartdrive-backend'
-#       - '--region=us-central1'
-#       - '--platform=managed'
-#       - '--allow-unauthenticated'
-#       - '--port=4000'
-#       - '--set-secrets=GOOGLE_API_KEY=google-api-key:latest,WEAVIATE_CLUSTER_URL=weaviate-cluster-url:latest,WEAVIATE_API_KEY=weaviate-api-key:latest'
-
-# images:
-#   - us-central1-docker.pkg.dev/smartdrive-461502/smartdrive-repo/smartdrive-backend
-
-# options:
-#   logging: CLOUD_LOGGING_ONLY
-# This file defines the CI/CD pipeline for the smartdrive-backend Node.js service.
-
 steps:
-  # 1. Build the Docker image
+  # Step 1: Build the Docker image
   - name: 'gcr.io/cloud-builders/docker'
-    id: 'Build'
     dir: 'backend'
-    args:
-      - 'build'
-      - '-t'
-      - 'us-central1-docker.pkg.dev/smartdrive-461502/smartdrive-repo/smartdrive-backend:$SHORT_SHA'
-      - '.'
+    args: ['build', '-t', 'us-central1-docker.pkg.dev/smartdrive-461502/smartdrive-repo/smartdrive-backend', '.']
 
+  # Step 2: Push the image to Artifact Registry
+  - name: 'gcr.io/cloud-builders/docker'
+    args: ['push', 'us-central1-docker.pkg.dev/smartdrive-461502/smartdrive-repo/smartdrive-backend']
+
+  # Step 3: Deploy to Cloud Run
   - name: 'gcr.io/google.com/cloudsdktool/cloud-sdk'
     entrypoint: gcloud
-    id: 'Deploy'
     args:
-      - 'run'
-      - 'deploy'
-      - 'smartdrive-backend'
-      - '--image=us-central1-docker.pkg.dev/smartdrive-461502/smartdrive-repo/smartdrive-backend:$SHORT_SHA'
-      - '--region=us-central1'
-      - '--platform=managed'
-      - '--allow-unauthenticated'
-      - '--port=4000'
-      - '--set-secrets=GOOGLE_API_KEY=google-api-key:latest,WEAVIATE_URL=weaviate-url:latest,WEAVIATE_API_KEY=weaviate-api-key:latest'
+      - run
+      - deploy
+      - smartdrive-backend
+      - --image=us-central1-docker.pkg.dev/smartdrive-461502/smartdrive-repo/smartdrive-backend
+      - --region=us-central1
+      - --platform=managed
+      - --allow-unauthenticated
+      - --port=4000
+      - '--set-env-vars'
+      - 'GOOGLE_API_KEY=AIzaSyC5OFQavbMAiFLqI-1hI9-9ljuvF2LHTe0, WEAVIATE_URL=https://tz0eepjdseamody9iqul3q.c0.us-west3.gcp.weaviate.cloud, WEAVIATE_API_KEY=d253aHQ4eUdZRDMzaVZTYl9oTG9IRWJ3WFUreVFOTG9LWUtMemdKRTlpOGdjTzNOR1FSWThjVGtJaURrPV92MjAw'
+
 
 images:
-  - 'us-central1-docker.pkg.dev/smartdrive-461502/smartdrive-repo/smartdrive-backend:$SHORT_SHA'
+  - us-central1-docker.pkg.dev/smartdrive-461502/smartdrive-repo/smartdrive-backend
 
 options:
   logging: CLOUD_LOGGING_ONLY
