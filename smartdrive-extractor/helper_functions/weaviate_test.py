@@ -55,5 +55,5 @@ def save_to_weaviate(data_to_save: dict, vector: list[float]):
         }
     )
     
-    logger.info(f"Successfully saved document '{properties['fileName']}' to Weaviate with UUID: {uuid}.")
+    # logger.info(f"Successfully saved document '{properties['fileName']}' to Weaviate with UUID: {uuid}.")
     return uuid

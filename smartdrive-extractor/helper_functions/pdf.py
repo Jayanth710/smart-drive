@@ -27,11 +27,12 @@ def extract_data_from_pdf(file_path: str, data: dict):
         text = docs[0].page_content
 
         data["fileName"] = re.sub(r'\s+', '_', data["fileName"])
+        filename = data["fileName"]
 
-        if(check_file_exists(data["fileName"])):
-            logger.info(f"Document '{data["fileName"]}' already exists in Weaviate. Skipping saving.")
+        if(check_file_exists(filename)):
+            logger.info(f"Document {filename} already exists in Weaviate. Skipping saving.")
             return {
-                "message": f"Document '{data["fileName"]}' already exists in Weaviate.",
+                "message": f"Document {filename} already exists in Weaviate.",
                 "created": False
             }
 
@@ -46,13 +47,13 @@ def extract_data_from_pdf(file_path: str, data: dict):
 
         if embedding:
             uuid = save_to_weaviate(data_to_save, embedding)
-            logger.info(f"Saved document '{data["fileName"]}' to Weaviate with UUID: {uuid}")
+            # logger.info(f"Saved document {filename} to Weaviate with UUID: {uuid}")
             return {
-                "message": f"Document '{data["fileName"]}' saved to Weaviate with UUID: {uuid}",
+                "message": f"Document {filename} saved to Weaviate with UUID: {uuid}",
                 "created": True
             }
         else:
-            logger.error(f"Could not generate embedding for {data['fileName']}. Skipping save.")
+            logger.error(f"Could not generate embedding for {filename}. Skipping save.")
 
     except Exception as e:
         logger.error(f"Failed during file processing for Weaviate: {e}", exc_info=True)
