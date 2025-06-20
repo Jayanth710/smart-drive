@@ -53,4 +53,7 @@ steps:
 images:
   - 'us-central1-docker.pkg.dev/smartdrive-461502/smartdrive-repo/smartdrive-extractor:$SHORT_SHA'
 
+options:
+  logging: CLOUD_LOGGING_ONLY
+
 timeout: '1200s'
