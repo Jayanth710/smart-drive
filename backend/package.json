@@ -24,6 +24,7 @@
   },
   "homepage": "https://github.com/Jayanth710/smart-drive#readme",
   "devDependencies": {
+    "@jest/globals": "^30.0.2",
     "@types/cors": "^2.8.19",
     "@types/express": "^5.0.2",
     "@types/jest": "^30.0.0",
