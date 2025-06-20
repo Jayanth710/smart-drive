@@ -34,7 +34,7 @@ def callback(message: pubsub_v1.subscriber.message.Message) -> None:
         if(response.get("url") is None):
             logger.info(response.get("message"))
         else:
-            logger.info(f"{response.get("message")} and URL: {response.get('url')}")
+            logger.info(f"{response.get("message")} and URL: {response.get("url")}")
         
         message.ack()
     except json.JSONDecodeError as e:
