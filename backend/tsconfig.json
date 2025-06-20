@@ -109,16 +109,17 @@
 // }
 {
   "compilerOptions": {
-    "target": "ESNext", // or ES2018, adjust based on your Node.js version
-    "module": "NodeNext", // Use NodeNext for modern Node.js module resolution
-    "moduleResolution": "NodeNext", // Required for Node.js-style imports
+    "target": "ES2020", // or ES2018, adjust based on your Node.js version
+    // "module": "NodeNext", // Use NodeNext for modern Node.js module resolution
+    // "moduleResolution": "NodeNext", // Required for Node.js-style imports
     "outDir": "./dist", // Output directory for compiled JS
     "rootDir": "./src", // Source directory
     "strict": true, // Enforce strict type checking
     "esModuleInterop": true, // Allow default imports from CommonJS modules
     "skipLibCheck": true, // Skip type checking of declaration files
     "allowSyntheticDefaultImports": true,
-    "forceConsistentCasingInFileNames": true // Prevent case-related import errors
+    "forceConsistentCasingInFileNames": true, // Prevent case-related import errors
+    "isolatedModules": true
   },
   "ts-node": {
     "esm": true
