@@ -5,7 +5,6 @@ dotenv.config();
 import uploadRouter from "./routes/upload.js";
 import { setupPubSub } from "./utils/pubsub.js";
 import queryRouter from "./routes/query.js";
-import getWeaviateClient from "./db/weaviate_client.js";
 
 const app = express();
 const PORT = process.env.PORT || 4000;
