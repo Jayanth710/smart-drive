@@ -1,7 +1,7 @@
 import os
 from google.cloud import storage
 from google.oauth2 import service_account
-from helper_functions.file_extractor import extract_data_from_pdf
+from helper_functions.file_extractor import file_extractor
 import logging
 
 logger = logging.getLogger(__name__)
@@ -46,10 +46,22 @@ def download_from_gcs(data: dict) -> str:
 
         blob.download_to_filename(output_path)
         logger.info(f"📥 Downloaded {file_name} to {output_path}")
-        
-        extract_data_from_pdf(output_path, data)
 
-        return output_path
+
+        
+        res = file_extractor(output_path, data)
+
+        if(not res.get("created")):
+            return {
+                "message": res.get("message"),
+                "url": None
+            }
+
+
+        return {
+            "message": res.get("message"),
+            "url": gcs_url
+        }
 
     except Exception as e:
         logger.error(f"❌ Failed during GCS download or processing for {file_name}: {e}", exc_info=True)

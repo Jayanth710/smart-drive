@@ -5,7 +5,6 @@ dotenv.config();
 import uploadRouter from "./routes/upload.js";
 import { setupPubSub } from "./utils/pubsub.js";
 import queryRouter from "./routes/query.js";
-// import { connectDB } from "../../../db.js";
 import getWeaviateClient from "./db/weaviate_client.js";
 
 const app = express();
@@ -14,16 +13,13 @@ const PORT = process.env.PORT || 4000;
 app.use(express.json())
 app.use(cors())
 
-await getWeaviateClient();
-// await connectDB();
+await setupPubSub();
 
 app.use(express.urlencoded({ extended: true }));
 
 app.get("/", (req, res) => {
     res.send("SmartDrive backend running 🚀");
 })
-
-await setupPubSub();
 
 app.use('/upload', uploadRouter);
 app.use('/query', queryRouter);

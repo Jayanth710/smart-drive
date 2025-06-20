@@ -30,8 +30,11 @@ def callback(message: pubsub_v1.subscriber.message.Message) -> None:
 
         logger.info(f"Downloading {data['fileName']} from {data['fileUrl']}")
         # logger.info(data)
-        output_path = download_from_gcs(data)
-        logger.info(f"Successfully processed and downloaded file to {output_path}")
+        response = download_from_gcs(data)
+        if(response.get("url") is None):
+            logger.info(response.get("message"))
+        else:
+            logger.info(f"{response.get("message")} and URL: {response.get('url')}")
         
         message.ack()
     except json.JSONDecodeError as e:

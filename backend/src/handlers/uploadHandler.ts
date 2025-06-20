@@ -11,19 +11,27 @@ export const handleFileUpload = async (req: Request, res: Response): Promise<voi
   try {
     const file = (req.file as Express.Multer.File);
 
-    if (!file) { 
+    if (!file) {
       logger.error('No file uploaded');
-      res.status(400).send('No file uploaded'); 
+      res.status(400).send('No file uploaded');
     }
 
-    const gcsUrl = await uploadFileToGCS(file);
+    const uploadRes = await uploadFileToGCS(file);
 
-    await publishFileMetadata(file, gcsUrl)
+    if (uploadRes.isNew) {
+      await publishFileMetadata(file, uploadRes.gcsUrl)
 
-    res.status(200).json({
-      message: 'File uploaded successfully',
-      gcsUrl,
-    });
+      res.status(200).json({
+        message: 'File uploaded successfully',
+        gcsUrl: uploadRes.gcsUrl,
+      });
+    }
+    else {
+      res.status(403).json({
+        message: 'File already exists in GCS.',
+        gcsUrl: uploadRes.gcsUrl
+      })
+    }
   } catch (error) {
     logger.error('GCS Upload Error:', error);
     res.status(500).send('Upload failed');
