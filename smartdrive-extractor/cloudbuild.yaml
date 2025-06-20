@@ -1,28 +1,56 @@
+# steps:
+#   # Step 1: Build the Docker image
+#   - name: 'gcr.io/cloud-builders/docker'
+#     dir: 'smartdrive-extractor'
+#     args: ['build', '-t', 'us-central1-docker.pkg.dev/smartdrive-461502/smartdrive-repo/smartdrive-extractor', '.']
+
+#   # Step 2: Push the image to Artifact Registry
+#   - name: 'gcr.io/cloud-builders/docker'
+#     args: ['push', 'us-central1-docker.pkg.dev/smartdrive-461502/smartdrive-repo/smartdrive-extractor']
+
+#   # Step 3: Deploy to Cloud Run
+#   - name: 'gcr.io/google.com/cloudsdktool/cloud-sdk'
+#     entrypoint: gcloud
+#     args:
+#       - 'run'
+#       - 'deploy'
+#       - 'smartdrive-extractor'
+#       - '--image=us-central1-docker.pkg.dev/smartdrive-461502/smartdrive-repo/smartdrive-extractor'
+#       - '--region=us-central1'
+#       - '--platform=managed'
+#       - '--allow-unauthenticated'
+#       - '--set-secrets=GOOGLE_API_KEY=google-api-key:latest,WEAVIATE_CLUSTER_URL=weaviate-cluster-url:latest,WEAVIATE_API_KEY=weaviate-api-key:latest'
+
+# images:
+#   - us-central1-docker.pkg.dev/smartdrive-461502/smartdrive-repo/smartdrive-extractor
+
+# options:
+#   logging: CLOUD_LOGGING_ONLY
 steps:
-  # Step 1: Build the Docker image
+  # 1. Build the Docker image
   - name: 'gcr.io/cloud-builders/docker'
+    id: 'Build'
     dir: 'smartdrive-extractor'
-    args: ['build', '-t', 'us-central1-docker.pkg.dev/smartdrive-461502/smartdrive-repo/smartdrive-extractor', '.']
+    args:
+      - 'build'
+      - '-t'
+      - 'us-central1-docker.pkg.dev/smartdrive-461502/smartdrive-repo/smartdrive-extractor:$SHORT_SHA'
+      - '.'
 
-  # Step 2: Push the image to Artifact Registry
-  - name: 'gcr.io/cloud-builders/docker'
-    args: ['push', 'us-central1-docker.pkg.dev/smartdrive-461502/smartdrive-repo/smartdrive-extractor']
-
-  # Step 3: Deploy to Cloud Run
   - name: 'gcr.io/google.com/cloudsdktool/cloud-sdk'
     entrypoint: gcloud
+    id: 'Deploy'
     args:
       - 'run'
       - 'deploy'
       - 'smartdrive-extractor'
-      - '--image=us-central1-docker.pkg.dev/smartdrive-461502/smartdrive-repo/smartdrive-extractor'
+      - '--image=us-central1-docker.pkg.dev/smartdrive-461502/smartdrive-repo/smartdrive-extractor:$SHORT_SHA'
       - '--region=us-central1'
       - '--platform=managed'
       - '--allow-unauthenticated'
-      - '--set-secrets=GOOGLE_API_KEY=google-api-key:latest,WEAVIATE_CLUSTER_URL=weaviate-cluster-url:latest,WEAVIATE_API_KEY=weaviate-api-key:latest'
+      - '--set-secrets=GOOGLE_API_KEY=google-api-key:latest,WEAVIATE_URL=weaviate-url:latest,WEAVIATE_API_KEY=weaviate-api-key:latest'
 
 images:
-  - us-central1-docker.pkg.dev/smartdrive-461502/smartdrive-repo/smartdrive-extractor
+  - 'us-central1-docker.pkg.dev/smartdrive-461502/smartdrive-repo/smartdrive-extractor:$SHORT_SHA'
 
-options:
-  logging: CLOUD_LOGGING_ONLY
+timeout: '1200s'
