@@ -12,15 +12,15 @@ steps:
   - name: 'gcr.io/google.com/cloudsdktool/cloud-sdk'
     entrypoint: gcloud
     args:
-      - run
-      - deploy
-      - smartdrive-backend
-      - --image=us-central1-docker.pkg.dev/smartdrive-461502/smartdrive-repo/smartdrive-backend
-      - --region=us-central1
-      - --platform=managed
-      - --allow-unauthenticated
-      - --port=4000
-      - '--set-secrets=GOOGLE_API_KEY=google-api-key:latest,WEAVIATE_URL=weaviate-url:latest,WEAVIATE_API_KEY=weaviate-api-key:latest'
+      - 'run'
+      - 'deploy'
+      - 'smartdrive-backend'
+      - '--image=us-central1-docker.pkg.dev/smartdrive-461502/smartdrive-repo/smartdrive-backend'
+      - '--region=us-central1'
+      - '--platform=managed'
+      - '--allow-unauthenticated'
+      - '--port=4000'
+      - '--set-secrets=GOOGLE_API_KEY=google-api-key:latest,WEAVIATE_CLUSTER_URL=weaviate-cluster-url:latest,WEAVIATE_API_KEY=weaviate-api-key:latest'
 
 images:
   - us-central1-docker.pkg.dev/smartdrive-461502/smartdrive-repo/smartdrive-backend
