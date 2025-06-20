@@ -20,7 +20,7 @@ steps:
       - --platform=managed
       - --allow-unauthenticated
       - --port=4000
-      - --set-env-vars=GOOGLE_API_KEY=google-api-key:latest,WEAVIATE_URL=weaviate-url:latest,WEAVIATE_API_KEY=weaviate-api-key:latest'
+      - '--set-secrets=GOOGLE_API_KEY=google-api-key:latest,WEAVIATE_URL=weaviate-url:latest,WEAVIATE_API_KEY=weaviate-api-key:latest'
 
 images:
   - us-central1-docker.pkg.dev/smartdrive-461502/smartdrive-repo/smartdrive-backend
