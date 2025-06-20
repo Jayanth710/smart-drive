@@ -1,46 +1,49 @@
 import os
-from helper_functions.pdf_summarizer import LLM_summarizer
+import logging
+import re
 from langchain_community.document_loaders import PDFPlumberLoader
-from pymongo.mongo_client import MongoClient
+from helper_functions.pdf_summarizer import LLM_summarizer
+from helper_functions.vector_embeddings import get_embedding
+from helper_functions.weaviate_test import save_to_weaviate
+from app.weaviate_client import setup_weaviate_schema
 
-client = MongoClient(os.getenv("MONGODB_URI"))
-db = client["SmartDrive-data"]
-collection = db["summaries"]
+logger = logging.getLogger(__name__)
 
-def extract_data_from_pdf(file_path):
-    """Extract data from a PDF file."""
-    file_name = os.path.basename(file_path)
-    _, file_extension = os.path.splitext(file_name)
-
-    if file_extension.lower() != '.pdf':
-        print("Not PD")
-        return
-    loader = PDFPlumberLoader(file_path)
-    docs = loader.load()
-    metadata = docs[0].metadata
-    text = docs[0].page_content
-
-    summary = LLM_summarizer(text)
-    data_extracted = {
-        "FileName": os.path.basename(file_path),
-        "Author": metadata.get("Author","Unknown"),
-        "CreatedAt": metadata.get("CreationDate","Unknown"),
-        "ModifiedAt": metadata.get("ModDate", "Unknown"),
-        "Summary": summary
-    }
+def extract_data_from_pdf(file_path: str, data: dict):
+    """
+    Checks the file type, processes the file, and saves the result to Weaviate.
+    """
     try:
-        exist = collection.find_one({"FileName": data_extracted["FileName"]})
-        if exist:
-            print(f"File already exists: {data_extracted['FileName']}")
-            if os.path.exists(file_path):
-                os.remove(file_path)
+
+        setup_weaviate_schema() 
+
+        if data.get("fileType","").split('/')[-1] != 'pdf':
+            print("Not PDF file. Skipping.")
             return
-        collection.insert_one(data_extracted)
-        print(f"Data inserted successfully: {data_extracted['FileName']}")
+        loader = PDFPlumberLoader(file_path)
+        docs = loader.load()
+        text = docs[0].page_content
+
+        data["fileName"] = re.sub(r'\s+', '_', data["fileName"])
+
+        summary = LLM_summarizer(text)
+        embedding = get_embedding(summary)
+        data_to_save = {
+            "FileName": data["fileName"],
+            "FileType": data["fileType"],
+            "UploadedAt": data["uploadedAt"],
+            "Summary": summary,
+        }
+
+        if embedding:
+            save_to_weaviate(data_to_save, embedding)
+        else:
+            logger.error(f"Could not generate embedding for {data['fileName']}. Skipping save.")
+
+    except Exception as e:
+        logger.error(f"Failed during file processing for Weaviate: {e}", exc_info=True)
+        raise
+    finally:
         if os.path.exists(file_path):
             os.remove(file_path)
-            print(f"Deleted temporary file: {file_path}")
-        else:
-            print(f"File not found: {file_path}")
-    except Exception as e:
-        print(f"Error inserting data: {e}")
+            logger.info(f"Deleted temporary file: {file_path}")

@@ -29,7 +29,8 @@ def callback(message: pubsub_v1.subscriber.message.Message) -> None:
             return
 
         logger.info(f"Downloading {data['fileName']} from {data['fileUrl']}")
-        output_path = download_from_gcs(data["fileUrl"], data["fileName"])
+        # logger.info(data)
+        output_path = download_from_gcs(data)
         logger.info(f"Successfully processed and downloaded file to {output_path}")
         
         message.ack()

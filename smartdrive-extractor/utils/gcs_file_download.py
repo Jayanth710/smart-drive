@@ -20,11 +20,13 @@ if not os.getenv('K_SERVICE'):
 storage_client = storage.Client(credentials=credentials)
 
 
-def download_from_gcs(gcs_url: str, file_name: str) -> str:
+def download_from_gcs(data: dict) -> str:
     """
     Downloads a file from GCS to the /tmp/ directory for processing.
     The /tmp/ directory is the only writable part of the filesystem in Cloud Run.
     """
+    gcs_url = data.get("fileUrl")
+    file_name = data.get("fileName")
     try:
         output_dir = "/tmp" 
         os.makedirs(output_dir, exist_ok=True)
@@ -45,7 +47,7 @@ def download_from_gcs(gcs_url: str, file_name: str) -> str:
         blob.download_to_filename(output_path)
         logger.info(f"📥 Downloaded {file_name} to {output_path}")
         
-        extract_data_from_pdf(output_path)
+        extract_data_from_pdf(output_path, data)
 
         return output_path
 
