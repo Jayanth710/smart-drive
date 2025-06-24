@@ -9,7 +9,8 @@ RUN apt-get update && apt-get install -y \
     build-essential \
     poppler-utils \
     libgl1-mesa-glx \
-    && apt-get clean
+    libglib2.0-0 \
+    && rm -rf /var/lib/apt/lists/*
 
 # Install pipenv or uv if you're using it
 # Replace this block if you're not using `uv`
