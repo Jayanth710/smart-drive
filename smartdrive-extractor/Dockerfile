@@ -8,6 +8,7 @@ WORKDIR /app
 RUN apt-get update && apt-get install -y \
     build-essential \
     poppler-utils \
+    libgl1-mesa-glx \
     && apt-get clean
 
 # Install pipenv or uv if you're using it
