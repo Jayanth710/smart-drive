@@ -1,4 +1,4 @@
-import { PubSub, Topic, Subscription } from '@google-cloud/pubsub';
+import { PubSub, Topic } from '@google-cloud/pubsub';
 import logger from '../logger.js';
 
 const projectId = 'smartdrive-461502';
