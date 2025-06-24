@@ -1,0 +1,48 @@
+# Byte-compiled / cache
+__pycache__/
+*.py[cod]
+*.so
+*.pyd
+
+# Environment / dependency files
+*.venv/
+.venv/
+env/
+venv/
+pip-wheel-metadata/
+poetry.lock
+Pipfile.lock
+
+# IDE/editor settings
+.vscode/
+.idea/
+*.swp
+
+# Git
+.git/
+.gitignore
+
+# OS & editor junk
+.DS_Store
+Thumbs.db
+
+# Logs & temp files
+*.log
+*.tmp
+*.bak
+
+# Tests or local-only scripts
+tests/
+test_*.py
+example_*.py
+
+# Output files
+app.log
+*.out
+
+# Docker
+Dockerfile*
+.dockerignore
+
+# Upload folders
+uploads/

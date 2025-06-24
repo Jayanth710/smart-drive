@@ -2,7 +2,7 @@ import os
 import cv2
 import logging
 import easyocr
-from PIL import Image
+from utils.llm import LLM_summarizer, LLM_caption_generator
 
 logger = logging.getLogger(__name__)
 
@@ -81,7 +81,7 @@ def structure_ocr_output(raw_result: list) -> str:
 
     return structured_text
 
-def image_ocr(image_path: str) -> str:
+def image_ocr(image_path: str):
     """
     Performs OCR on an image file using the EasyOCR library and returns the
     extracted text as a single string.
@@ -107,8 +107,37 @@ def image_ocr(image_path: str) -> str:
             structured_text = "[OCR failed: No text detected]"
         
         logger.info("EasyOCR extraction completed successfully.")
-        return structured_text
+        summary, embeddings = LLM_summarizer(structured_text)
+
+        if not summary or not embeddings:
+            logger.error("LLM failed to summarize the extracted text.")
+            return {
+                "message": "LLM failed to summarize the extracted text.",
+                "created": False
+            }
+
+        return summary, embeddings
 
     except Exception as e:
         logger.error(f"An error occurred during EasyOCR processing: {e}", exc_info=True)
         return f"[OCR processing failed: {e}]"
+    
+def image_caption(image_path: str):
+    """
+    Generates a caption for an image file using the LLM Captioning and returns
+    the caption as a string."""
+
+    try:
+        summary, embeddings = LLM_caption_generator(image_path)
+
+        if not summary or not embeddings:
+            logger.error("LLM failed to summarize the extracted text.")
+            return {
+                "message": "LLM failed to summarize the extracted text.",
+                "created": False
+            }
+        
+        return summary, embeddings
+    except Exception as e:
+        logger.error(f"An error occurred during LLM Captioning: {e}", exc_info=True)
+        return f"[Captioning failed: {e}]"

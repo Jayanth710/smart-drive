@@ -1,0 +1,29 @@
+steps:
+  # Step 1: Build the Docker image
+  - name: 'gcr.io/cloud-builders/docker'
+    dir: 'smartdrive-image-extractor'
+    args: ['build', '-t', 'us-central1-docker.pkg.dev/smartdrive-461502/smartdrive-repo/smartdrive-image-extractor', '.']
+
+  # Step 2: Push the image to Artifact Registry
+  - name: 'gcr.io/cloud-builders/docker'
+    args: ['push', 'us-central1-docker.pkg.dev/smartdrive-461502/smartdrive-repo/smartdrive-image-extractor']
+
+  # Step 3: Deploy to Cloud Run
+  - name: 'gcr.io/google.com/cloudsdktool/cloud-sdk'
+    entrypoint: gcloud
+    args:
+      - run
+      - deploy
+      - smartdrive-image-extractor
+      - --image=us-central1-docker.pkg.dev/smartdrive-461502/smartdrive-repo/smartdrive-image-extractor
+      - --region=us-central1
+      - --platform=managed
+      - --allow-unauthenticated
+      - '--set-env-vars'
+      - 'GOOGLE_API_KEY=AIzaSyC5OFQavbMAiFLqI-1hI9-9ljuvF2LHTe0, WEAVIATE_URL=https://tz0eepjdseamody9iqul3q.c0.us-west3.gcp.weaviate.cloud, WEAVIATE_API_KEY=d253aHQ4eUdZRDMzaVZTYl9oTG9IRWJ3WFUreVFOTG9LWUtMemdKRTlpOGdjTzNOR1FSWThjVGtJaURrPV92MjAw'
+
+images:
+  - us-central1-docker.pkg.dev/smartdrive-461502/smartdrive-repo/smartdrive-image-extractor
+
+options:
+  logging: CLOUD_LOGGING_ONLY
