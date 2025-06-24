@@ -15,4 +15,6 @@ RUN uv sync
 
 COPY . .
 
+EXPOSE 8080
+
 CMD ["uv", "run", "main.py"]
