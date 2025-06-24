@@ -1,10 +1,11 @@
 import logging
 import os
 import re
-from app.weaviate_client import setup_weaviate_schema
-from helper_functions.weaviate_test import check_file_exists
+from helper_functions.weaviate_utils import setup_weaviate_schema
+from helper_functions.weaviate_utils import check_file_exists, upload_to_weaviate
 from utils.unstructured import extract_from_file
-from helper_functions.upload_weaviate import upload_to_weaviate
+from helper_functions.image_utils import image_classifier, image_ocr
+from helper_functions.llm import LLM_summarizer, LLM_caption_generator
 
 
 logger = logging.getLogger(__name__)
@@ -32,16 +33,22 @@ def file_extractor(file_path: str, data: dict):
                     "created": False
                 }
 
-        file_type = data.get("fileType").split('/')[-1]
+        file_type = data.get("fileType").split('/')[0]
 
-        if file_type not in ["png", "jpg", "jpeg" , "mp3", "mp4", "wav"]:
+        if file_type in ["application", "text"]:
             text_extracted = extract_from_file(file_path)
             if(not text_extracted):
                 return {
                     "message": "No text extracted from the file",
                     "created": False
                 }
-            res = upload_to_weaviate(text_extracted, data)
+            summary, embedding = LLM_summarizer(text_extracted, "application")
+            if(not summary or not embedding):
+                return {
+                    "message": "No summary embedding generated",
+                    "created": False
+                }
+            res = upload_to_weaviate(data, summary, embedding)
             if(not res.get("created")):
                 return {
                     "message": res.get("message"),
@@ -52,6 +59,36 @@ def file_extractor(file_path: str, data: dict):
                 "message": res.get("message"),
                 "created": True,
             }
+        elif file_type in ["image"]:
+            classification_type = image_classifier(file_path)
+            if(not classification_type):
+                return {
+                    "message": "No text extracted from the file",
+                    "created": False
+                }
+            if classification_type == "OCR":
+                res_data = image_ocr(file_path)
+                summary, embedding = LLM_summarizer(res_data, "image-ocr")
+            elif classification_type == "CAPTION":
+                summary, embedding = LLM_caption_generator(file_path)
+            
+            if(not summary or not embedding):
+                return {
+                    "message": "No summary embedding generated",
+                    "created": False
+                }
+            
+            if summary:
+                res = upload_to_weaviate(data, summary, embedding)
+                if(not res.get("created")):
+                    return {
+                        "message": res.get("message"),
+                        "created": False
+                    }
+                return {
+                    "message": res.get("message"),
+                    "created": True,
+                }
         else:
             logger.info(f"File type {file_type} not supported. Skipping saving.")
             return {

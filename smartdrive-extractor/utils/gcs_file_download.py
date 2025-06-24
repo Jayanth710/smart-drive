@@ -65,4 +65,7 @@ def download_from_gcs(data: dict) -> str:
 
     except Exception as e:
         logger.error(f"❌ Failed during GCS download or processing for {file_name}: {e}", exc_info=True)
-        return
+        return {
+            "message": f"❌ Failed during GCS download or processing for {file_name}: {e}",
+            "url": None
+        }
