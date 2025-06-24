@@ -5,13 +5,13 @@ const projectId = 'smartdrive-461502';
 
 const topics = {
     data: 'smartdrive-data-extract',
-    // image: 'smartdrive-image-extract',
+    image: 'smartdrive-image-extract',
     media: 'smartdrive-media-extract'
 };
 
 const subscriptions = {
     data: 'smartdrive-data-extract-sub',
-    // image: 'smartdrive-image-extract-sub',
+    image: 'smartdrive-image-extract-sub',
     media: 'smartdrive-media-extract-sub'
 };
 
@@ -50,7 +50,7 @@ export const createTopicAndSubscription = async (topicName: string, subName: str
 export const setupPubSub = async () => {
     logger.info("Setting up Pub/Sub topics and subscriptions...");
     await createTopicAndSubscription(topics.data, subscriptions.data);
-    // await createTopicAndSubscription(topics.image, subscriptions.image);
+    await createTopicAndSubscription(topics.image, subscriptions.image);
     await createTopicAndSubscription(topics.media, subscriptions.media);
     logger.info("Pub/Sub setup complete.");
 };
@@ -61,11 +61,9 @@ export const publishFileMetadata = async (file: Express.Multer.File, fileUrl: st
         let topicNameToSend: string;
         const fileType = file.mimetype;
 
-        // if (fileType.startsWith('image/')) {
-        //     topicNameToSend = topics.image;
-        // } else 
-
-        if (fileType.startsWith('video/') || fileType.startsWith('audio/')) {
+        if (fileType.startsWith('image/')) {
+            topicNameToSend = topics.image;
+        } else if (fileType.startsWith('video/') || fileType.startsWith('audio/')) {
             topicNameToSend = topics.media;
         } else {
             topicNameToSend = topics.data;

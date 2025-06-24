@@ -1,15 +1,13 @@
 import logging
 import os
 import re
-from helper_functions.weaviate_utils import setup_weaviate_schema
-from helper_functions.weaviate_utils import check_file_exists, upload_to_weaviate
-from utils.unstructured import extract_from_file
-from helper_functions.llm import LLM_summarizer
+from utils.weaviate_utils import check_file_exists, upload_to_weaviate, setup_weaviate_schema
+from utils.image_utils import image_classifier, image_ocr, image_caption
 
 
 logger = logging.getLogger(__name__)
 
-def file_extractor(file_path: str, data: dict):
+def image_extractor(file_path: str, data: dict):
     """Redirect the data from the file based on the application typeand writes it to a weaviate."""
 
     try:
@@ -26,38 +24,44 @@ def file_extractor(file_path: str, data: dict):
             }
 
         if(check_file_exists(filename)):
-                logger.info(f"Document {filename} already exists in Weaviate. Skipping saving.")
-                return {
-                    "message": f"Document {filename} already exists in Weaviate.",
-                    "created": False
-                }
+            logger.info(f"Document {filename} already exists in Weaviate. Skipping saving.")
+            return {
+                "message": f"Document {filename} already exists in Weaviate.",
+                "created": False
+            }
 
         file_type = data.get("fileType").split('/')[0]
 
-        if file_type in ["application", "text"]:
-            text_extracted = extract_from_file(file_path)
-            if(not text_extracted):
+        if file_type in ["image"]:
+            classification_type = image_classifier(file_path)
+            if(not classification_type):
                 return {
                     "message": "No text extracted from the file",
                     "created": False
                 }
-            summary, embedding = LLM_summarizer(text_extracted, "application")
-            if(not summary or not embedding):
+            if classification_type == "OCR":
+                summary, embedding = image_ocr(file_path)
+            elif classification_type == "CAPTION":
+                summary, embedding = image_caption(file_path)
+            
+            if not summary or not embedding:
+                logger.error(f"Failed to extract any text/caption for '{filename}'. Skipping upload.")
                 return {
-                    "message": "No summary embedding generated",
+                    "message": f"Could not process image '{filename}'.",
                     "created": False
                 }
+            
             res = upload_to_weaviate(data, summary, embedding)
             if(not res.get("created")):
                 return {
                     "message": res.get("message"),
                     "created": False
                 }
-            
             return {
                 "message": res.get("message"),
                 "created": True,
             }
+                
         else:
             logger.info(f"File type {file_type} not supported. Skipping saving.")
             return {
@@ -76,19 +80,3 @@ def file_extractor(file_path: str, data: dict):
         if os.path.exists(file_path):
             os.remove(file_path)
             logger.info(f"Deleted temporary file: {file_path}")
-
-    # match file_type:
-    #     case "pdf":
-    #         logger.info("Extracting PDF data...")
-    #         res = extract_data_from_pdf(output_path, data)
-    #         if(not res.get("created")):
-    #             return {
-    #                 "message": res.get("message"),
-    #                 "created": False
-    #             }
-    #         else:
-    #             return {
-    #                 "message": res.get("message"),
-    #                 "created": True,
-    #             }
-
