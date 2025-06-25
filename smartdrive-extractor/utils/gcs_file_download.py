@@ -1,7 +1,7 @@
 import os
 from google.cloud import storage
 from google.oauth2 import service_account
-from helper_functions.file_extractor import file_extractor
+from utils.file_extractor import file_extractor
 import logging
 
 logger = logging.getLogger(__name__)

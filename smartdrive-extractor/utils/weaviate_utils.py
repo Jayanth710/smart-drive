@@ -2,7 +2,6 @@ import weaviate.classes as wvc
 from weaviate.classes.query import Filter
 import logging
 from app.weaviate_client import get_weaviate_client
-from helper_functions.llm import LLM_summarizer, get_embedding
 from dotenv import load_dotenv
 load_dotenv()
 

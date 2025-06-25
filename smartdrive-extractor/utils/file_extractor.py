@@ -1,10 +1,10 @@
 import logging
 import os
 import re
-from helper_functions.weaviate_utils import setup_weaviate_schema
-from helper_functions.weaviate_utils import check_file_exists, upload_to_weaviate
+from utils.weaviate_utils import setup_weaviate_schema
+from utils.weaviate_utils import check_file_exists, upload_to_weaviate
 from utils.unstructured import extract_from_file
-from helper_functions.llm import LLM_summarizer
+from utils.llm import LLM_summarizer
 
 
 logger = logging.getLogger(__name__)
