@@ -28,6 +28,7 @@ Present the final output as a single, well-structured paragraph and The final ou
 
     response = model.generate_content(prompt)
     embedding = get_embedding(response.text)
+    
     return response.text, embedding
 
 def get_embedding(text):

@@ -44,6 +44,7 @@ Present the final description as a single, well-structured concise paragraph."""
     with Image.open(image_path) as img:
         response = model.generate_content([prompt, img])
     embedding = get_embedding(response.text)
+    
     return response.text, embedding
 
 def get_embedding(text):

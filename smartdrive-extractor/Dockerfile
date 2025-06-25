@@ -8,11 +8,6 @@ WORKDIR /app
 RUN apt-get update && apt-get install -y \
     build-essential \
     poppler-utils \
-    libgl1-mesa-glx \
-    libglib2.0-0 \
-    libmagic1 \
-    libreoffice \
-    tesseract-ocr \
     && rm -rf /var/lib/apt/lists/*
 
 # Install pipenv or uv if you're using it
