@@ -2,6 +2,8 @@ import os
 import cv2
 import logging
 import easyocr
+from PIL import Image
+import numpy as np
 from utils.llm import LLM_summarizer, LLM_caption_generator
 
 logger = logging.getLogger(__name__)
@@ -27,59 +29,15 @@ def image_classifier(image_path: str, threshold: float = 450.0) -> str:
         A string, either 'OCR' or 'CAPTION'.
     """
     try:
-        # 1. Load the image in grayscale
-        image = cv2.imread(image_path, cv2.IMREAD_GRAYSCALE)
-        if image is None:
-            raise ValueError("Could not read the image file.")
-        
-        variance = cv2.Laplacian(image, cv2.CV_64F).var()
+        with Image.open(image_path) as img:
+            gray_image_for_cv2 = cv2.cvtColor(np.array(img.convert('RGB')), cv2.COLOR_RGB2GRAY)
 
-        if variance > threshold:
-            logger.info(f"Variance ({variance:.2f}) > threshold ({threshold}). Classified as OCR.")
-            return "OCR"
-        else:
-            logger.info(f"Variance ({variance:.2f}) <= threshold ({threshold}). Classified as CAPTION.")
-            return "CAPTION"
-
+        variance = cv2.Laplacian(gray_image_for_cv2, cv2.CV_64F).var()
+        logger.info(f"Image Laplacian variance: {variance:.2f}")
+        return "OCR" if variance > threshold else "CAPTION"
     except Exception as e:
-        logger.error(f"Local image classification failed: {e}", exc_info=True)
+        logger.error(f"Local image classification failed: {e}")
         return "CAPTION"
-
-
-def structure_ocr_output(raw_result: list) -> str:
-    """
-    Takes the raw output from EasyOCR and structures the text in a more
-    natural, top-to-bottom, left-to-right reading order.
-
-    Args:
-        raw_result: The list of detections directly from reader.readtext().
-
-    Returns:
-        A single string with the text structured in reading order.
-    """
-    structured_text = ""
-    current_y = -1
-    line_buffer = []
-
-    sorted_boxes = sorted(raw_result, key=lambda res: (res[0][0][1], res[0][0][0]))
-
-    for (bbox, text, prob) in sorted_boxes:
-        top_y = bbox[0][1]
-
-        if current_y == -1 or abs(top_y - current_y) > 10:
-
-            if line_buffer:
-                structured_text += " ".join(line_buffer) + "\n"
-            line_buffer = [text]
-            current_y = top_y
-        else:
-
-            line_buffer.append(text)
-
-    if line_buffer:
-        structured_text += " ".join(line_buffer)
-
-    return structured_text
 
 def image_ocr(image_path: str):
     """
@@ -101,11 +59,9 @@ def image_ocr(image_path: str):
 
         result = reader.readtext(image_path)
 
-        if result:
-            structured_text = structure_ocr_output(result)
-        else:
-            structured_text = "[OCR failed: No text detected]"
-        
+        text_lines = [line[1] for line in result]
+        structured_text = "\n".join(text_lines)
+
         logger.info("EasyOCR extraction completed successfully.")
         summary, embeddings = LLM_summarizer(structured_text)
 
@@ -117,10 +73,10 @@ def image_ocr(image_path: str):
             }
 
         return summary, embeddings
-
+    
     except Exception as e:
-        logger.error(f"An error occurred during EasyOCR processing: {e}", exc_info=True)
-        return f"[OCR processing failed: {e}]"
+        logger.error(f"Error during EasyOCR processing: {e}")
+        return ""
     
 def image_caption(image_path: str):
     """

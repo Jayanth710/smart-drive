@@ -10,12 +10,16 @@ logger = logging.getLogger(__name__)
 project_id = "smartdrive-461502"
 subscription_id = "smartdrive-data-extract-sub"
 
-isLocal = os.getenv("NODE_ENV")
-if(isLocal=='dev'):
-    credentials = service_account.Credentials.from_service_account_file(
-    "smartdrive-service-account.json")
-else:
-    credentials = None
+credentials = None
+
+if not os.getenv('K_SERVICE'):
+    try:
+        credentials = service_account.Credentials.from_service_account_file(
+            "smartdrive-service-account.json"
+        )
+        logger.info("GCS Downloader: Loaded local service account credentials.")
+    except Exception as e:
+        logger.warning(f"GCS Downloader: Could not load local credentials, using defaults: {e}")
     
 def callback(message: pubsub_v1.subscriber.message.Message) -> None:
     """Processes a single Pub/Sub message."""

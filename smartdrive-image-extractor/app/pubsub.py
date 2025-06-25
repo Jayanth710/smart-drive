@@ -4,19 +4,22 @@ import os
 from google.cloud import pubsub_v1
 from google.oauth2 import service_account
 from utils.gcs_file_download import download_from_gcs
-from google.api_core.exceptions import NotFound
 
 logger = logging.getLogger(__name__)
 
-PROJECT_ID = os.getenv("GCP_PROJECT_ID", "smartdrive-461502")
-SUBSCRIPTION_ID = os.getenv("PUBSUB_SUBSCRIPTION_ID", "smartdrive-image-extract-sub")
+PROJECT_ID = "smartdrive-461502"
+SUBSCRIPTION_ID = "smartdrive-image-extract-sub"
 
-isLocal = os.getenv("NODE_ENV")
-if(isLocal=='dev'):
-    credentials = service_account.Credentials.from_service_account_file(
-    "smartdrive-service-account.json")
-else:
-    credentials = None
+credentials = None
+
+if not os.getenv('K_SERVICE'):
+    try:
+        credentials = service_account.Credentials.from_service_account_file(
+            "smartdrive-service-account.json"
+        )
+        logger.info("GCS Downloader: Loaded local service account credentials.")
+    except Exception as e:
+        logger.warning(f"GCS Downloader: Could not load local credentials, using defaults: {e}")
     
 def callback(message: pubsub_v1.subscriber.message.Message) -> None:
     """Processes a single Pub/Sub message."""
