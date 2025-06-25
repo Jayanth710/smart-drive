@@ -15,7 +15,7 @@ steps:
       - run
       - deploy
       - smartdrive-media-extractor
-      - --media=us-central1-docker.pkg.dev/smartdrive-461502/smartdrive-repo/smartdrive-media-extractor
+      - --image=us-central1-docker.pkg.dev/smartdrive-461502/smartdrive-repo/smartdrive-media-extractor
       - --region=us-central1
       - --platform=managed
       - --allow-unauthenticated
