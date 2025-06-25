@@ -108,7 +108,7 @@ def upload_to_weaviate(data: dict, summary: str, embedding: list) -> dict:
         
         logger.info(f"Successfully saved document '{file_name}' to Weaviate with UUID: {uuid}.")
 
-        client.close()
+        # client.close()
         
         return {
             "message": f"Document {file_name} saved to Weaviate with UUID: {uuid}",
