@@ -4,11 +4,13 @@ import os
 from google.cloud import pubsub_v1
 from google.oauth2 import service_account
 from utils.gcs_file_download import download_from_gcs
+from google.api_core.exceptions import NotFound
 
 logger = logging.getLogger(__name__)
 
 project_id = "smartdrive-461502"
 subscription_id = "smartdrive-data-extract-sub"
+ACK_DEADLINE_SECONDS = 300
 
 credentials = None
 
@@ -23,6 +25,15 @@ if not os.getenv('K_SERVICE'):
     
 def callback(message: pubsub_v1.subscriber.message.Message) -> None:
     """Processes a single Pub/Sub message."""
+
+    try:
+        message.modify_ack_deadline(ACK_DEADLINE_SECONDS)
+        logger.info(f"Extended ack deadline for message {message.message_id} to {ACK_DEADLINE_SECONDS} seconds.")
+    except Exception as e:
+        logger.error(f"Failed to modify ack deadline: {e}")
+        message.nack()
+        return
+
     try:
         logger.info(f"Received message with ID: {message.message_id}")
         data = json.loads(message.data.decode("utf-8"))
@@ -41,6 +52,10 @@ def callback(message: pubsub_v1.subscriber.message.Message) -> None:
             logger.info(f"{response.get('message')} and URL: {response.get('url')}")
         
         message.ack()
+
+    except NotFound:
+        logger.error(f"File '{data.get('fileName')}' not found. Acking message to break loop.")
+        message.ack() 
     except json.JSONDecodeError as e:
         logger.error(f"Failed to decode message data: {e}")
         message.nack()
