@@ -1,0 +1,26 @@
+name: Python Extractor - Test and Lint
+
+on:
+  push:
+    branches: ['*']
+
+jobs:
+  test-and-lint:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: ./smartdrive-media-extractor
+
+    steps:
+      - name: 📥 Checkout code
+        uses: actions/checkout@v3
+
+      - name: 🐍 Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: 📦 Install dependencies with uv
+        run: |
+          pip install uv
+          uv sync
