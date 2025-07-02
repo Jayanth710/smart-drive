@@ -14,9 +14,12 @@ const PORT = process.env.PORT || 4000;
 
 app.use(express.json())
 app.use(cors({
-    origin: "http://localhost:3000",
+    origin: [
+        "http://localhost:3000",
+        "https://smart-drive-eta.vercel.app/"
+    ],
     credentials: true,
-  }))
+}))
 app.use(express.urlencoded({ extended: true }));
 
 await connectDB()
