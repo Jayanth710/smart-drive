@@ -10,20 +10,26 @@ logging.basicConfig(level=logging.INFO,
 
 logger = logging.getLogger(__name__)
 
-def run_background_listener():
-    """Wrapper function for the Pub/Sub listener."""
-    logger.info("Starting background Pub/Sub listener...")
-    pubsub()
+# def run_background_listener():
+#     """Wrapper function for the Pub/Sub listener."""
+#     logger.info("Starting background Pub/Sub listener...")
+#     pubsub()
 
 def create_app():
     app = Flask(__name__)
-    listener_thread = threading.Thread(target=run_background_listener, daemon=True)
-    listener_thread.start()
+    # listener_thread = threading.Thread(target=run_background_listener, daemon=True)
+    # listener_thread.start()
 
     @app.route("/")
     def health_check():
         logger.info("Health check endpoint was called.")
         return {"status": "running"}
+    
+    @app.route("/", methods=["POST"])
+    def trigger_pull():
+        logger.info("Cloud Scheduler triggered a pull now.")
+        pubsub()  # actively run a pull on-demand
+        return {"status": "triggered"}, 200
 
     return app
 

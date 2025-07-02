@@ -138,12 +138,14 @@ def upload_to_weaviate(data: dict, summary: str, embedding: list) -> dict:
             }
         )
         
-        logger.info(f"Successfully saved document '{data.get("fileName")}' to Weaviate with UUID: {uuid}.")
+        # logger.info(f"Successfully saved document '{data.get("fileName")}' to Weaviate with UUID: {uuid}.")
+        logger.info(f"Successfully saved document '{data.get('fileName')}' to Weaviate with UUID: {uuid}.")
+
 
         # client.close()
         
         return {
-            "message": f"Document {data.get("fileName")} saved to Weaviate with UUID: {uuid}",
+            "message": f"Document {data.get('fileName')} saved to Weaviate with UUID: {uuid}",
             "created": True,
             "uuid": str(uuid)
         }
