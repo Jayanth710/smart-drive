@@ -49,8 +49,6 @@ const generateFileSignedUrl = async (req: AuthenticatedRequest, res: Response): 
             res.status(403).json({ message: "Forbidden: You do not have access to this file." });
         }
 
-        // const gcsPath = `${fileRecord.userId}/${fileRecord.fileHash}`;
-        // const file = storage.bucket(bucketName).file(gcsPath);
         const file = getUserFile(fileRecord);
 
         const [exists] = await file.exists();

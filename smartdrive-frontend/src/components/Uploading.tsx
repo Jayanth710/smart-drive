@@ -1,5 +1,5 @@
 "use client";
-import React, { useState, Dispatch, SetStateAction } from "react";
+import React, { Dispatch, SetStateAction } from "react";
 import { MultiStepLoader as Loader } from "./ui/multi-step-loader";
 import { IconSquareRoundedX } from "@tabler/icons-react";
 
@@ -13,29 +13,29 @@ const loadingStates = [
   {
     text: "Uploading File to GCS ",
   },
-//   {
-//     text: "He makes soap",
-//   },
-//   {
-//     text: "We goto a bar",
-//   },
-//   {
-//     text: "Start a fight",
-//   },
-//   {
-//     text: "We like it",
-//   },
-//   {
-//     text: "Welcome to F**** C***",
-//   },
+  //   {
+  //     text: "He makes soap",
+  //   },
+  //   {
+  //     text: "We goto a bar",
+  //   },
+  //   {
+  //     text: "Start a fight",
+  //   },
+  //   {
+  //     text: "We like it",
+  //   },
+  //   {
+  //     text: "Welcome to F**** C***",
+  //   },
 ];
 
 type LoadingProps = {
-    loadingState: [boolean, Dispatch<SetStateAction<boolean>>]
-    [key: string]: any
+  loadingState: [boolean, Dispatch<SetStateAction<boolean>>]
+  [key: string]: unknown
 }
 
-const MultiStepLoaderDemo:React.FC<LoadingProps> = ({loadingState, ...props}) => {
+const MultiStepLoaderDemo: React.FC<LoadingProps> = ({ loadingState }) => {
   const [loading, setLoading] = loadingState;
   return (
     <div className="w-full h-[60vh] flex items-center justify-center">

@@ -7,20 +7,20 @@ import { Input } from './ui/input'
 import { cn } from '@/lib/utils'
 import { Button } from './ui/button'
 import axios from 'axios'
-import { toast } from 'react-toastify'
+// import { toast } from 'react-toastify'
 import { useAuth } from '@/context/AuthContext'
 import apiClient from '@/lib/api'
-import { User } from 'lucide-react'
+// import { User } from 'lucide-react'
 
 type LogInProps = {
     className?: string
     setIsLogin: Dispatch<SetStateAction<boolean>>
-    [key: string]: any
+    [key: string]: unknown
 }
 
 const LogIn: React.FC<LogInProps> = ({ className, setIsLogin, ...props }) => {
     const { login } = useAuth()
-    const [error, setError] = useState("")
+    // const [ error , setError] = useState("")
     const [data, setData] = useState({
         email: "",
         password: ""
@@ -36,7 +36,7 @@ const LogIn: React.FC<LogInProps> = ({ className, setIsLogin, ...props }) => {
 
     const handleLogin = async (e: React.FormEvent) => {
         e.preventDefault()
-        setError("")
+        // setError("")
 
         try {
             const response = await apiClient.post(`/api/login`, data)
@@ -55,12 +55,12 @@ const LogIn: React.FC<LogInProps> = ({ className, setIsLogin, ...props }) => {
                     setIsLogin(false); // show signup form
                     setData({ email: "", password: "" });
                 } else {
-                    setError("Invalid credentials");
+                    // setError("Invalid credentials");
                     console.log(error);
                 }
             }
             else {
-                setError("Something went wrong");
+                // setError("Something went wrong");
                 console.error(error);
             }
         }

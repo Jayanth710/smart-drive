@@ -25,11 +25,7 @@
 
 // export default RecentUploads
 "use client"
-
-import apiClient from '@/lib/api';
-import React, { useEffect, useState } from 'react';
-import { ChevronDown, ChevronUp } from "lucide-react";
-import { IconChevronDown, IconChevronUp } from '@tabler/icons-react';
+import React from 'react';
 import { useAuth } from '@/context/AuthContext';
 import { FileCard } from './FileCard';
 

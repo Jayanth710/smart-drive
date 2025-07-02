@@ -1,52 +1,47 @@
 "use client"
-import Image from "next/image";
-import { Button } from "@/components/ui/button"
-import { Card, CardContent, CardHeader } from "@/components/ui/card"
 import { useState } from "react"
-import { registerWithEmail, loginWithEmail, loginWithGoogle } from "@/lib/auth"
+// import { registerWithEmail, loginWithEmail } from "@/lib/auth"
 import LogIn from '../components/LogIn';
 import SignUp from '../components/SignUp';
-import { ToastContainer } from 'react-toastify';
 import "react-toastify/dist/ReactToastify.css";
 import { LampDemo } from "@/components/WebEffect";
 
 function Home() {
   const [isLogin, setIsLogin] = useState(true)
-  const [error, setError] = useState("")
-  const [activeSidebar, setActiveSidebar] = useState('left')
-  const [data, setData] = useState({
-    firstname: "",
-    lastname: "",
-    email: "",
-    password: "",
-    re_password: "",
-    phone: ""
-  })
+  // const [error, setError] = useState("")
+  // const [data, setData] = useState({
+  //   firstname: "",
+  //   lastname: "",
+  //   email: "",
+  //   password: "",
+  //   re_password: "",
+  //   phone: ""
+  // })
 
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault()
-    setError("")
-    try {
-      if (isLogin) {
-        await loginWithEmail(data.email, data.password)
-        alert("Logged in successfully!")
-      } else {
-        await registerWithEmail(data.email, data.password)
-        alert("Account created!")
-      }
-    } catch (err: any) {
-      setError(err.message)
-    }
-  }
+  // const handleSubmit = async (e: React.FormEvent) => {
+  //   e.preventDefault()
+  //   setError("")
+  //   try {
+  //     if (isLogin) {
+  //       await loginWithEmail(data.email, data.password)
+  //       alert("Logged in successfully!")
+  //     } else {
+  //       await registerWithEmail(data.email, data.password)
+  //       alert("Account created!")
+  //     }
+  //   } catch (err: any) {
+  //     setError(err.message)
+  //   }
+  // }
 
 
-  const OnChangeHandler = async (e: React.ChangeEvent<HTMLInputElement>) => {
-    setData({
-      ...data,
-      [e.target.name]: e.target.value
-    })
-  }
+  // const OnChangeHandler = async (e: React.ChangeEvent<HTMLInputElement>) => {
+  //   setData({
+  //     ...data,
+  //     [e.target.name]: e.target.value
+  //   })
+  // }
 
   return (
     <div className="min-h-screen grid grid-cols-1 md:grid-cols-2">

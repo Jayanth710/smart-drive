@@ -1,7 +1,7 @@
 import axios from 'axios';
 
 const apiClient = axios.create({
-  baseURL: process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:4000',
+  baseURL: process.env.BACKEND_URL || 'https://smartdrive-backend-1078682420390.us-central1.run.app' || 'http://localhost:4000',
 });
 
 // --- Interceptor ---

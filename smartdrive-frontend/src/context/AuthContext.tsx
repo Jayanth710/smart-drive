@@ -41,54 +41,11 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [imagesData, setImagesData] = useState<DataItem[] | null>(null);
   const [mediaData, setMediaData] = useState<DataItem[] | null>(null);
 
-
-  const refreshData = useCallback(async () => {
-    console.log("Refreshing all user data...");
-    fetchUploads()
-  }, []);
-
-  useEffect(() => {
-    const storedToken = localStorage.getItem('accessToken');
-    if (storedToken) {
-      setToken(storedToken);
-      user()
-      refreshData()
-    }
-  }, [refreshData]);
-
-  
-
-  const login = async (token: string) => {
-    setToken(token);
-    localStorage.setItem('accessToken', token);
-    await user()
-  };
-
-  const logout = () => {
-    setToken(null);
-    localStorage.removeItem('accessToken');
-  };
-
-  const user = async () => {
-    try {
-      const response = await apiClient.get('/api/user')
-      if(response.status === 200){
-        setData(response.data.data)
-      }
-      else{
-        setData(null)
-      }
-    } catch (error) {
-      console.error('Error fetching user data:', error);
-      setData(null);
-    }
-  }
-
   const fetchDataItems = async (collection: string) => {
     try {
-      const response = await apiClient.get('/upload', {params: {queryCollection: collection}});
+      const response = await apiClient.get('/upload', { params: { queryCollection: collection } });
       const apiData = response.data.data;
-      
+
       const items = apiData.map((item: DataItem) => ({
         filename: item.filename,
         filetype: item.filetype,
@@ -99,7 +56,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
       return items
     }
-    catch(error){
+    catch (error) {
       console.error("Failed to fetch recent uploads:", error);
     }
   }
@@ -118,8 +75,50 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
       const mediaItems = await fetchDataItems("Media")
       setMediaData(mediaItems)
     }
-    catch(error){
+    catch (error) {
       console.error("Failed to fetch recent uploads:", error);
+    }
+  }
+
+  const refreshData = useCallback(async () => {
+    console.log("Refreshing all user data...");
+    fetchUploads()
+  }, [fetchUploads]);
+
+  useEffect(() => {
+    const storedToken = localStorage.getItem('accessToken');
+    if (storedToken) {
+      setToken(storedToken);
+      user()
+      refreshData()
+    }
+  }, [refreshData]);
+
+
+
+  const login = async (token: string) => {
+    setToken(token);
+    localStorage.setItem('accessToken', token);
+    await user()
+  };
+
+  const logout = () => {
+    setToken(null);
+    localStorage.removeItem('accessToken');
+  };
+
+  const user = async () => {
+    try {
+      const response = await apiClient.get('/api/user')
+      if (response.status === 200) {
+        setData(response.data.data)
+      }
+      else {
+        setData(null)
+      }
+    } catch (error) {
+      console.error('Error fetching user data:', error);
+      setData(null);
     }
   }
 

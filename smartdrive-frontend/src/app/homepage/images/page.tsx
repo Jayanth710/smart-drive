@@ -1,14 +1,14 @@
 "use client"
 import { FileCard } from '@/components/FileCard'
-import RecentUploads from '@/components/RecentUploads'
+import RecentUploads, { UploadItem } from '@/components/RecentUploads'
 import SearchBar from '@/components/Search'
 import { HoverEffect } from '@/components/ui/card-hover-effect'
 import { useAuth } from '@/context/AuthContext'
 import React, { useState } from 'react'
 
-const page = () => {
+const Page = () => {
     const { imagesData, refreshData } = useAuth()
-    const [searchResults, setSearchResults] = useState<any[]>([]);
+    const [searchResults, setSearchResults] = useState<UploadItem[]>([]);
     
     const projects = [
         {
@@ -34,7 +34,7 @@ const page = () => {
                 <div className="w-full max-w-5xl mt-4">
                     <h3 className="text-lg font-semibold mb-2">Results:</h3>
                     {searchResults.map((file) => (
-                        <FileCard key={file.fileId} file={file} onAction={handleAction} />
+                        <FileCard key={file.file_id} file={file} onAction={handleAction} />
                     ))}
                 </div>
             ) : (
@@ -48,4 +48,4 @@ const page = () => {
     );
 }
 
-export default page
+export default Page

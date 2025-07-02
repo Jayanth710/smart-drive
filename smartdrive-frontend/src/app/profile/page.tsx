@@ -1,7 +1,7 @@
 "use client"
 import SideBar from '@/components/SideBar'
 import UserProfile from '@/components/UserProfile'
-import React, { ReactNode } from 'react'
+import React from 'react'
 
 
 const page = () => {

@@ -1,5 +1,4 @@
 import SideBar from "@/components/SideBar";
-import UploadFile from "@/components/UploadFile";
 
 export default function DashboardLayout({
   children,

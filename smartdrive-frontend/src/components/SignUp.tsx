@@ -19,21 +19,31 @@ import {
     IconBrandGithub,
     IconBrandGoogle,
 } from "@tabler/icons-react";
-import { Button } from "./ui/button";
-import { useRouter } from "next/navigation";
+// import { useRouter } from "next/navigation";
 import axios from "axios";
 
 type LogInProps = {
     className?: string
     setIsLogin: Dispatch<SetStateAction<boolean>>
-    [key: string]: any
+    [key: string]: unknown
 }
+
+interface SignUpFormData {
+    firstname: string;
+    lastname: string;
+    email: string;
+    password: string;
+    re_password: string;
+    phone: string;
+}
+
+
 const PORT = 4000
 const URL = `http://localhost:${PORT}`
-function SignUp({ className, setIsLogin, ...props }: LogInProps) {
-    const [loading, setLoading] = useState(false);
-    const [error, setError] = useState("");
-    const [data, setData] = useState({
+function SignUp({ setIsLogin }: LogInProps) {
+    // const [loading, setLoading] = useState(false);
+    // const [error, setError] = useState("");
+    const [data, setData] = useState<SignUpFormData>({
         firstname: "",
         lastname: "",
         email: "",
@@ -41,9 +51,9 @@ function SignUp({ className, setIsLogin, ...props }: LogInProps) {
         re_password: "",
         phone: ""
     })
-    const router = useRouter()
+    // const router = useRouter()
 
-    const onChangeHandler = (event: any) => {
+    const onChangeHandler = (event: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
         setData({
             ...data,
             [event.target.name]: event.target.value,
@@ -53,18 +63,24 @@ function SignUp({ className, setIsLogin, ...props }: LogInProps) {
 
     const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
         e.preventDefault();
-        setLoading(true);
-        setError("");
+        // setLoading(true);
+        // setError("");
 
         try {
             // Send login data to the backend
             if (data.password !== data.re_password) {
-                setError("Password and re-password do not match.")
+                // setError("Password and re-password do not match.")
                 alert("Password and re-password do not match.")
                 return
             }
 
-            const { re_password, ...payload } = data;
+            const payload = {
+                firstname: data.firstname,
+                lastname: data.lastname,
+                email: data.email,
+                password: data.password,
+                phone: data.phone,
+            };
 
             const response = await axios.post(`${URL}/api/register`, payload);
             console.log(response.data);
@@ -80,13 +96,13 @@ function SignUp({ className, setIsLogin, ...props }: LogInProps) {
                 re_password: "",
                 phone: ""
             });
-        } catch (err: any) {
-            if (err.response?.status === 404) {
+        } catch (err: unknown) {
+            if (axios.isAxiosError(err) && err.response?.status === 404) {
                 setIsLogin(false)
             }
-            setError("Login failed. Please check your credentials.");
+            // setError("Login failed. Please check your credentials.");
         } finally {
-            setLoading(false);
+            // setLoading(false);
         }
     };
     return (

@@ -42,10 +42,17 @@ export const FileUpload = ({
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const handleFileChange = (newFiles: File[]) => {
-    setFiles((prevFiles) => [...newFiles]);
-    onChange && onChange(newFiles);
+    setFiles(() => [...newFiles]);
+    // onChange && onChange(newFiles);
 
-    uploadFile(newFiles[0]);
+    // uploadFile(newFiles[0]);
+    if (onChange) {
+      onChange(newFiles);
+    }
+
+    if (newFiles.length > 0) {
+      uploadFile(newFiles[0]);
+    }
   };
 
   const handleClick = () => {
@@ -125,10 +132,10 @@ export const FileUpload = ({
 
   useEffect(() => {
     setFiles([])
-    setLoading(false);
-    setUploadError(null);
+    setLoading(false)
+    setUploadError(null)
     setSuccessMessage(null);
-  },[])
+  }, [])
 
 
   return (
