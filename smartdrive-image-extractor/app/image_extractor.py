@@ -23,7 +23,16 @@ def image_extractor(file_path: str, data: dict):
                 "created": False
             }
 
-        if(check_file_exists(filename)):
+        file_id = data.get("_id", "")
+        user_id = data.get("userId", "")
+
+        if not file_id or not user_id:
+            return {
+                "message": "Missing required fields in the data",
+                "created": False
+            }
+
+        if(check_file_exists(file_id, user_id)):
             logger.info(f"Document {filename} already exists in Weaviate. Skipping saving.")
             return {
                 "message": f"Document {filename} already exists in Weaviate.",
@@ -51,7 +60,7 @@ def image_extractor(file_path: str, data: dict):
                     "created": False
                 }
             
-            res = upload_to_weaviate(data, summary, embedding)
+            res = upload_to_weaviate(data, summary, embedding, classification_type)
             if(not res.get("created")):
                 return {
                     "message": res.get("message"),
