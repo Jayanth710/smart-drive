@@ -24,8 +24,17 @@ def file_extractor(file_path: str, data: dict):
                 "message": "No file name provided",
                 "created": False
             }
+        
+        file_id = data.get("_id", "")
+        user_id = data.get("userId", "")
 
-        if(check_file_exists(filename)):
+        if not file_id or not user_id:
+            return {
+                "message": "Missing required fields in the data",
+                "created": False
+            }
+
+        if(check_file_exists(file_id, user_id)):
                 logger.info(f"Document {filename} already exists in Weaviate. Skipping saving.")
                 return {
                     "message": f"Document {filename} already exists in Weaviate.",
@@ -41,7 +50,7 @@ def file_extractor(file_path: str, data: dict):
                     "message": "No text extracted from the file",
                     "created": False
                 }
-            summary, embedding = LLM_summarizer(text_extracted, "application")
+            summary, embedding = LLM_summarizer(text_extracted)
             if(not summary or not embedding):
                 return {
                     "message": "No summary embedding generated",

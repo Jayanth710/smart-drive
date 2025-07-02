@@ -11,13 +11,12 @@ const serviceKeyPath = path.join(__dirname, '../../smartdrive-service-account.js
 
 interface UploadResult {
   gcsUrl: string;
-  isNew: boolean;
 }
 
 const isLocal = process.env.NODE_ENV === 'local';
 // { keyFilename: serviceKeyPath}
-const storage = isLocal ? new Storage({ keyFilename: serviceKeyPath }) : new Storage();
-const bucket = storage.bucket('smartdrive_storage');
+export const storage = isLocal ? new Storage({ keyFilename: serviceKeyPath }) : new Storage();
+export const bucket = storage.bucket('smartdrive_storage');
 
 const checkFileExistsGCS = async (fileName: string) => {
 
@@ -33,34 +32,41 @@ const checkFileExistsGCS = async (fileName: string) => {
   }
 }
 
-export const uploadFileToGCS = async (file: Express.Multer.File): Promise<UploadResult> => {
-  const fileName = `${file.originalname.replace(/\s+/g, '_')}`;
+export const uploadFileToGCS = async (file: Express.Multer.File, userId: string, fileHash: string): Promise<UploadResult> => {
+  const originalFileName = file.originalname.replace(/\s+/g, '_')
+  const fileName = `${userId}/${fileHash}`;
 
-  const fileExists = await checkFileExistsGCS(fileName)
+  // const fileExists = await checkFileExistsGCS(fileName)
 
-  if (fileExists) {
-    logger.info(`File ${fileName} already exists in GCS.`);
-    return {
-      gcsUrl: `https://storage.googleapis.com/${bucket.name}/${fileName}`,
-      isNew: false
-    };
-  }
+  // if (fileExists) {
+  //   logger.info(`File ${fileName} already exists in GCS.`);
+  //   return {
+  //     gcsUrl: `https://storage.googleapis.com/${bucket.name}/${fileName}`,
+  //     isNew: false
+  //   };
+  // }
+
+  const blob = bucket.file(fileName);
+
+  const blobStream = blob.createWriteStream({
+    resumable: false,
+    metadata: {
+      contentType: file.mimetype,
+      fileName: originalFileName,
+      metadata: {
+        userId: userId,
+      },
+    },
+  });
   return new Promise(async (resolve, reject) => {
 
-    const blob = bucket.file(fileName);
-
-    const blobStream = blob.createWriteStream({
-      resumable: false,
-      contentType: file.mimetype,
-    });
 
     blobStream.on('error', (err) => reject(err));
 
     blobStream.on('finish', () => {
       const publicUrl = `https://storage.googleapis.com/${bucket.name}/${blob.name}`;
       resolve({
-        gcsUrl: publicUrl,
-        isNew: true
+        gcsUrl: publicUrl
       });
     });
 

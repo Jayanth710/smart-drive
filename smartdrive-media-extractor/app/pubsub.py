@@ -10,7 +10,7 @@ logger = logging.getLogger(__name__)
 
 PROJECT_ID = "smartdrive-461502"
 SUBSCRIPTION_ID = "smartdrive-media-extract-sub"
-ACK_DEADLINE_SECONDS = 300
+ACK_DEADLINE_SECONDS = 600
 
 credentials = None
 
@@ -38,12 +38,12 @@ def callback(message: pubsub_v1.subscriber.message.Message) -> None:
         logger.info(f"Received message with ID: {message.message_id}")
         data = json.loads(message.data.decode("utf-8"))
         
-        if "fileUrl" not in data or "fileName" not in data:
+        if "gcsUrl" not in data or "fileName" not in data:
             logger.error("Message is missing 'fileUrl' or 'fileName'.")
-            message.ack()
+            message.nack()
             return
 
-        logger.info(f"Downloading {data['fileName']} from {data['fileUrl']}")
+        logger.info(f"Downloading {data['fileName']} from GCS...")
 
         response = download_from_gcs(data)
         if(response.get("url") is None):

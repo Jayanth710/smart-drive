@@ -16,7 +16,7 @@ def split_text(text, chunk_size=3000, chunk_overlap=200):
     combined_text = "\n\n".join(chunks)
     return combined_text
 
-def LLM_summarizer(text: str, task: str):
+def LLM_summarizer(text: str):
     """Summarize a Image file using Gemini model."""
 
     combined_text = split_text(text)

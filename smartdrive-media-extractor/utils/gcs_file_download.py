@@ -25,7 +25,7 @@ def download_from_gcs(data: dict):
     Downloads a file from GCS to the /tmp/ directory for processing.
     The /tmp/ directory is the only writable part of the filesystem in Cloud Run.
     """
-    gcs_url = data.get("fileUrl")
+    gcs_url = data.get("gcsUrl")
     file_name = data.get("fileName")
     try:
         output_dir = "/tmp" 
