@@ -1,13 +1,13 @@
 import { Response } from "express";
-import { Storage } from '@google-cloud/storage';
 import { AuthenticatedRequest } from "../middleware/auth.js";
-import UserFile from "../models/userFileModel.js";
+import UserFile, { UserFileType } from "../models/userFileModel.js";
 import logger from "../logger.js";
+import { GetSignedUrlConfig } from "@google-cloud/storage";
 import { bucket } from "../services/gcsUpload.js";
 import { deleteWeaviateFile } from "../services/queryWeaviate.js";
 
-const getUserFile = (fileRecord: any) => {
-    const filePath = `${fileRecord.userId}/${fileRecord.fileHash}`;
+const getUserFile = (fileRecord: UserFileType | null) => {
+    const filePath = `${fileRecord?.userId}/${fileRecord?.fileHash}`;
     return bucket.file(filePath);
 };
 
@@ -58,7 +58,7 @@ const generateFileSignedUrl = async (req: AuthenticatedRequest, res: Response): 
             res.status(404).json({ message: 'File not found' });
         }
 
-        const options: any = {
+        const options: GetSignedUrlConfig = {
             version: 'v4',
             action: 'read',
             expires: Date.now() + 15 * 60 * 1000,

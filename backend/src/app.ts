@@ -7,7 +7,6 @@ import { setupPubSub } from "./utils/pubsub.js";
 import queryRouter from "./routes/query.js";
 import userRouter from "./routes/auth.js";
 import connectDB from "./db/mongo.js";
-import { verifyToken } from "./middleware/auth.js";
 import fileRouter from "./routes/file.js";
 
 const app = express();

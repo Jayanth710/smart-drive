@@ -1,4 +1,4 @@
-import { Request, Response } from "express";
+import { Response } from "express";
 import logger from "../logger.js";
 import { queryWeaviate } from "../services/queryWeaviate.js";
 import { AuthenticatedRequest } from "../middleware/auth.js";

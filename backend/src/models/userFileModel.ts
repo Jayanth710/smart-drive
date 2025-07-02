@@ -1,6 +1,6 @@
 import mongoose from "mongoose";
 
-export interface UserFile extends mongoose.Document {
+export interface UserFileType extends mongoose.Document {
     _id: mongoose.Types.ObjectId;
     userId: mongoose.Types.ObjectId;
     fileName: string;

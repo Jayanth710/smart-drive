@@ -1,6 +1,6 @@
 import getWeaviateClient from "../db/weaviate_client.js";
 // import weaviate from "weaviate-client"
-import { Filters, Sort, WeaviateGenericObject } from 'weaviate-client';
+import { Filters, WeaviateGenericObject } from 'weaviate-client';
 import logger from "../logger.js";
 import generateQueryEmbedding from "../utils/getQueryEmbedding.js";
 
@@ -71,7 +71,7 @@ const queryWeaviate = async (userId: string, userQuery: string, queryCollection:
 
                 results.push(...allResultsInLoop);
             }
-            const finalResults = new Map<string, WeaviateGenericObject<any>>();
+            const finalResults = new Map<string, WeaviateGenericObject<SmartDriveSchema>>();
             for (const obj of results) {
                 const existing = finalResults.get(obj.uuid);
 
@@ -121,7 +121,7 @@ const getRecentUploads = async (userId: string, queryCollection: string) => {
             const res = await collection.query.fetchObjects({
                 limit: 10,
                 filters: collection.filter.byProperty("user_id").equal(userId),
-                sort: collection.sort.byProperty("created_at" as any, false),
+                sort: collection.sort.byProperty("created_at" as string, false),
             });
 
             results.push(...res.objects.map(obj => obj.properties as SmartDriveSchema));

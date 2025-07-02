@@ -1,4 +1,4 @@
-import { Response, Request } from 'express';
+import { Response } from 'express';
 import multer from 'multer';
 import { uploadFileToGCS } from '../services/gcsUpload.js';
 import { publishFileMetadata } from '../utils/pubsub.js';
@@ -100,8 +100,8 @@ export const getUploads = async (req: AuthenticatedRequest, res: Response): Prom
 
     const results = await getRecentUploads(userId!, queryCollection!)
     res.status(200).send({message: "Fetching Siccessful", data: results});
-  } catch (error) {
-    res.status(500).send("Internal Server Error");
+  } catch (error: unknown) {
+    res.status(500).send(`Internal Server Error ${error}`);
   }
 }
 

@@ -1,6 +1,6 @@
 import { PubSub, Topic } from '@google-cloud/pubsub';
 import logger from '../logger.js';
-import { UserFile } from '../models/userFileModel.js'; // Import the IUserFile interface
+import { UserFileType } from '../models/userFileModel.js'; // Import the IUserFile interface
 
 const projectId = process.env.GCP_PROJECT_ID || 'smartdrive-461502';
 
@@ -26,12 +26,18 @@ const createTopicAndSubscription = async (topicName: string, subName: string): P
     try {
         [topic] = await pubsub.createTopic(topicName);
         logger.info(`✅ Topic ${topic.name} created.`);
-    } catch (err: any) {
-        if (err.code === 6) { // 'ALREADY_EXISTS' error code
-            logger.info(`ℹ️ Topic ${topicName} already exists.`);
-            topic = pubsub.topic(topicName);
+    } catch (err: unknown) {
+        if (err && typeof err === "object" && "code" in err) {
+            const errorWithCode = err as { code: number };
+            if (errorWithCode.code === 6) {
+                logger.info(`ℹ️ Topic ${topicName} already exists.`);
+                topic = pubsub.topic(topicName);
+            } else {
+                logger.error(`❌ Failed to create topic ${topicName}:`, err);
+                throw err;
+            }
         } else {
-            logger.error(`❌ Failed to create topic ${topicName}:`, err);
+            logger.error(`❌ Unexpected error type:`, err);
             throw err;
         }
     }
@@ -39,11 +45,17 @@ const createTopicAndSubscription = async (topicName: string, subName: string): P
     try {
         await topic.createSubscription(subName);
         logger.info(`✅ Subscription ${subName} created.`);
-    } catch (err: any) {
-        if (err.code === 6) {
-            logger.info(`ℹ️ Subscription ${subName} already exists.`);
+    } catch (err: unknown) {
+        if (err && typeof err === "object" && "code" in err) {
+            const errorWithCode = err as { code: number };
+            if (errorWithCode.code === 6) {
+                logger.info(`ℹ️ Subscription ${subName} already exists.`);
+            } else {
+                logger.error(`❌ Failed to create subscription ${subName}:`, err);
+                throw err;
+            }
         } else {
-            logger.error(`❌ Failed to create subscription ${subName}:`, err);
+            logger.error(`❌ Unexpected error type while creating subscription ${subName}:`, err);
             throw err;
         }
     }
@@ -57,7 +69,7 @@ export const setupPubSub = async () => {
     logger.info("Pub/Sub setup complete.");
 };
 
-export const publishFileMetadata = async (fileInfo: UserFile) => {
+export const publishFileMetadata = async (fileInfo: UserFileType) => {
     try {
         let topicNameToSend: string;
         const fileType = fileInfo.fileType;

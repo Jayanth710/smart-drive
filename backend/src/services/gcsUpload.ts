@@ -2,7 +2,7 @@ import { Storage } from '@google-cloud/storage';
 import path from 'path';
 import { fileURLToPath } from 'url';
 import dotenv from 'dotenv';
-import logger from '../logger.js';
+// import logger from '../logger.js';
 dotenv.config();
 
 const __filename = fileURLToPath(import.meta.url);
@@ -18,19 +18,19 @@ const isLocal = process.env.NODE_ENV === 'local';
 export const storage = isLocal ? new Storage({ keyFilename: serviceKeyPath }) : new Storage();
 export const bucket = storage.bucket('smartdrive_storage');
 
-const checkFileExistsGCS = async (fileName: string) => {
+// const checkFileExistsGCS = async (fileName: string) => {
 
-  try {
-    const file = bucket.file(fileName);
-    console.log(`Checking for gs://${bucket.name}/${fileName}...`);
-    const [exists] = await file.exists();
+//   try {
+//     const file = bucket.file(fileName);
+//     console.log(`Checking for gs://${bucket.name}/${fileName}...`);
+//     const [exists] = await file.exists();
 
-    return exists;
-  } catch (error) {
-    logger.error('An error occurred:', error);
-    return false;
-  }
-}
+//     return exists;
+//   } catch (error) {
+//     logger.error('An error occurred:', error);
+//     return false;
+//   }
+// }
 
 export const uploadFileToGCS = async (file: Express.Multer.File, userId: string, fileHash: string): Promise<UploadResult> => {
   const originalFileName = file.originalname.replace(/\s+/g, '_')
