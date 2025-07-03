@@ -1,5 +1,7 @@
 import axios from 'axios';
 
+const baseURL1= process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:4000'
+console.log(baseURL1)
 const apiClient = axios.create({
   baseURL: process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:4000',
 });
