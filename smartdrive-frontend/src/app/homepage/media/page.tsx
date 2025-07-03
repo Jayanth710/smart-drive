@@ -6,7 +6,7 @@ import { HoverEffect } from '@/components/ui/card-hover-effect'
 import { useAuth } from '@/context/AuthContext'
 import React, { useState } from 'react'
 
-const Page = () => {
+const MediaPage = () => {
     const { documentsData, refreshData } = useAuth()
     const [searchResults, setSearchResults] = useState<UploadItem[]>([]);
     const projects = [
@@ -46,4 +46,4 @@ const Page = () => {
     );
 }
 
-export default Page
+export default MediaPage;

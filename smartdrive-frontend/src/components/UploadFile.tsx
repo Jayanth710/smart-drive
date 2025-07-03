@@ -80,11 +80,11 @@ export default function UploadFile() {
                     <FileUpload
                         onChange={() => {
                             setUploadSuccess(true);
-                            window.location.reload();
+                            // window.location.reload();
                         }}
                     />
                     <DialogClose asChild>
-                        <Button variant="outline" className="mt-4 w-full">
+                        <Button variant="outline" className="mt-4 w-full" onClick={() => window.location.reload()}>
                             Close
                         </Button>
                     </DialogClose>

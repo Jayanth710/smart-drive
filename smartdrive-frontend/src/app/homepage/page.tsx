@@ -76,7 +76,7 @@ import { useAuth } from "@/context/AuthContext";
 import React, { useState } from "react"; // Import useState
 import { FileCard } from "@/components/FileCard"; // Import FileCard
 
-const Page = () => {
+const Home = () => {
     const { documentsData, imagesData, mediaData, refreshData } = useAuth();
     // 1. Manage results state here
     const [searchResults, setSearchResults] = useState<UploadItem[]>([]);
@@ -130,4 +130,4 @@ const Page = () => {
         );
     };
 
-export default Page;
+export default Home;

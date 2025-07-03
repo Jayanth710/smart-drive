@@ -6,7 +6,7 @@ import { HoverEffect } from '@/components/ui/card-hover-effect'
 import { useAuth } from '@/context/AuthContext'
 import React, { useState } from 'react'
 
-const Page = () => {
+const DocumentsPage = () => {
     const { documentsData, refreshData } = useAuth()
     const [searchResults, setSearchResults] = useState<UploadItem[]>([]);
     
@@ -48,4 +48,4 @@ const Page = () => {
     );
 }
 
-export default Page
+export default DocumentsPage;
