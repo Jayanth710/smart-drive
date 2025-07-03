@@ -16,7 +16,7 @@ app.use(express.json())
 app.use(cors({
     origin: [ 
         "http://localhost:3000",
-        "https://smartdrive-backend-1078682420390.us-central1.run.app"
+        "https://smart-drive-eta.vercel.app"
     ],
     credentials: true,
 }))
