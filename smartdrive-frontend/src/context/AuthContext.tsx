@@ -227,7 +227,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     }
   }
 
-  const fetchUploads = async () => {
+  const fetchUploads = useCallback(async () => {
     try {
       const dataItems = await fetchDataItems("all")
       setCollectionData(dataItems)
@@ -244,7 +244,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     catch(error){
       console.error("Failed to fetch recent uploads:", error);
     }
-  }
+  },[])
 
   const refreshData = useCallback(async () => {
     console.log("Refreshing all user data...");
