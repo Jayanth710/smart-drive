@@ -21,7 +21,7 @@ steps:
       - '--allow-unauthenticated'
       - '--memory=2Gi'
       - '--set-env-vars'
-      - 'GOOGLE_API_KEY=AIzaSyC5OFQavbMAiFLqI-1hI9-9ljuvF2LHTe0, WEAVIATE_URL=https://tz0eepjdseamody9iqul3q.c0.us-west3.gcp.weaviate.cloud, WEAVIATE_API_KEY=d253aHQ4eUdZRDMzaVZTYl9oTG9IRWJ3WFUreVFOTG9LWUtMemdKRTlpOGdjTzNOR1FSWThjVGtJaURrPV92MjAw'
+      - 'GOOGLE_API_KEY=AIzaSyC5OFQavbMAiFLqI-1hI9-9ljuvF2LHTe0, WEAVIATE_URL=https://exjbm8glqcuh7dvo5fscrg.c0.us-west3.gcp.weaviate.cloud, WEAVIATE_API_KEY=a0pzUUhsZldVWk5UdzZhV19RcWRBV2twN05UUk9YWFkwQWlPcHFFRCtrZEhvZkIyYUZpNGhVNkd1UnZZPV92MjAw, GCP_PROJECT_ID=smartdrive-461502, PUBSUB_SUBSCRIPTION_ID=smartdrive-image-extract-sub'
 
 images:
   - us-central1-docker.pkg.dev/smartdrive-461502/smartdrive-repo/smartdrive-image-extractor
