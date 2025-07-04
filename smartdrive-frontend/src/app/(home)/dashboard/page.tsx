@@ -5,10 +5,10 @@ import SearchBar from "@/components/Search";
 import { HoverEffect } from "@/components/ui/card-hover-effect";
 import React, { useState } from "react";
 import { FileCard } from "@/components/FileCard";
-import { fetchCollections } from "@/lib/fetchCollections";
+import { useFetchCollections } from "@/lib/fetchCollections";
 
 const Home = () => {
-    const { projects, isLoading, error, refreshData } = fetchCollections();
+    const { projects, isLoading, error, refreshData } = useFetchCollections ();
     const [searchResults, setSearchResults] = useState<UploadItem[]>([]);
     const handleAction = () => {
         refreshData();

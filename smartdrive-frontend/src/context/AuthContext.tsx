@@ -1,6 +1,6 @@
 "use client"
 import apiClient from '@/lib/api';
-import { createContext, useContext, useState, ReactNode, useEffect, useCallback } from 'react';
+import { createContext, useContext, useState, ReactNode, useEffect } from 'react';
 
 interface UserData {
   id: string;

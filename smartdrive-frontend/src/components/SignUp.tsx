@@ -10,6 +10,7 @@ import {
 } from "@tabler/icons-react";
 // import { useRouter } from "next/navigation";
 import axios from "axios";
+import Link from "next/link";
 
 type LogInProps = {
     className?: string
@@ -193,9 +194,9 @@ function SignUp({ setIsLogin }: LogInProps) {
             </form>
             <div className="text-center text-sm text-black dark:text-white" onClick={() => setIsLogin(true)}>
                 Already have an account?{" "}
-                <a href="/" className="underline underline-offset-4">
+                <Link href="/" className="underline underline-offset-4">
                     Log In
-                </a>
+                </Link>
             </div>
         </div>
     );

@@ -1,7 +1,7 @@
 "use client"
 import React from 'react';
 import { FileCard } from './FileCard';
-import { fetchCollections } from '@/lib/fetchCollections';
+import { useFetchCollections } from '@/lib/fetchCollections';
 
 export type UploadItem = {
   filename: string;
@@ -17,7 +17,7 @@ type RecentUploadsProps = {
 
 const RecentUploads = ({ type = "all" }: RecentUploadsProps) => {
   // const [uploads, setUploads] = useState<UploadItem[]>([]);
-  const { documentsData, imagesData, mediaData, refreshData, combinedData } = fetchCollections()
+  const { documentsData, imagesData, mediaData, refreshData, combinedData } = useFetchCollections()
 
   let collectionDataToDisplay: UploadItem[] | null;
 

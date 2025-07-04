@@ -3,12 +3,12 @@ import { FileCard } from '@/components/FileCard'
 import RecentUploads, { UploadItem } from '@/components/RecentUploads'
 import SearchBar from '@/components/Search'
 import { HoverEffect } from '@/components/ui/card-hover-effect'
-import { fetchCollections } from '@/lib/fetchCollections' 
+import { useFetchCollections } from '@/lib/fetchCollections' 
 import React, { useState } from 'react'
 
 const ImagesPage = () => {
 
-    const { projects, isLoading, error, refreshData } = fetchCollections();
+    const { projects, isLoading, error, refreshData } = useFetchCollections ();
     const [searchResults, setSearchResults] = useState<UploadItem[]>([]);
 
     const handleAction = () => {

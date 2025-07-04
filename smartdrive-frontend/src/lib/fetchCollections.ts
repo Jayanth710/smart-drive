@@ -20,7 +20,7 @@ const fetchDataItems = async (collection: string): Promise<DataItem[]> => {
     }
 };
 
-export const fetchCollections = () => {
+export const useFetchCollections = () => {
     const [combinedData, setCombinedData] = useState<DataItem[] | null>(null);
     const [documentsData, setDocumentsData] = useState<DataItem[] | null>(null);
     const [imagesData, setImagesData] = useState<DataItem[] | null>(null);
