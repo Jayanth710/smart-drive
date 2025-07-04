@@ -26,9 +26,6 @@ def setup_weaviate_schema():
     if client.collections.exists(COLLECTION_NAME):
         logger.info(f"Collection '{COLLECTION_NAME}' already exists.")
         return
-    # if client.collections.exists(COLLECTION_NAME):
-    #     logger.warning(f"Collection '{COLLECTION_NAME}' exists. Deleting to apply new schema with named vector.")
-    #     client.collections.delete(COLLECTION_NAME)
 
     logger.info(f"Creating collection '{COLLECTION_NAME}'...")
     

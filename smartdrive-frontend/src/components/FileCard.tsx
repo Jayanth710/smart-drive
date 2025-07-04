@@ -26,9 +26,8 @@ export const FileCard = ({ file, onAction }: FileCardProps) => {
         setIsProcessing(true);
         setError('');
         try {
-            // This calls the backend endpoint: GET /api/files/{fileId}/url?action=view
             const response = await apiClient.get(`/file/${file.file_id}/url?action=view`);
-            window.open(response.data.url, '_blank'); // Open the secure, temporary URL
+            window.open(response.data.url, '_blank');
         } catch (err) {
             setError('Could not get viewable link.');
             console.error(err);
@@ -41,9 +40,7 @@ export const FileCard = ({ file, onAction }: FileCardProps) => {
         setIsProcessing(true);
         setError('');
         try {
-            // This calls the backend endpoint: GET /api/files/{fileId}/url?action=download
             const response = await apiClient.get(`/file/${file.file_id}/url?action=download`);
-            // The browser will automatically handle the download
             window.location.href = response.data.url;
         } catch (err) {
             setError('Could not get download link.');
@@ -69,30 +66,6 @@ export const FileCard = ({ file, onAction }: FileCardProps) => {
     };
 
     return (
-        // <div className="border rounded-xl shadow p-4 mb-4 bg-white dark:bg-gray-900">
-        //     <div className="flex justify-between items-center">
-        //         <div>
-        //             <h3 className="text-lg font-semibold">{file.filename}</h3>
-        //             <p className="text-sm text-gray-600 dark:text-gray-300">{file.filetype}</p>
-        //             <p className="text-xs text-gray-500 dark:text-gray-400">
-        //                 {new Date(file.created_at).toLocaleString()}
-        //             </p>
-        //         </div>
-        //         <button
-        //             onClick={() => setShowSummary(!showSummary)}
-        //             className="p-2"
-        //             aria-label="Toggle Summary"
-        //         >
-        //             {showSummary ? <IconChevronUp size={20} /> : <IconChevronDown size={20} />}
-        //         </button>
-        //     </div>
-        //     {showSummary && (
-        //         <div className="mt-2 text-gray-700 dark:text-gray-200 text-sm whitespace-pre-line">
-        //             <b>Overview</b>
-        //             <div className="mt-1">{file.summary}</div>
-        //         </div>
-        //     )}
-        // </div>
         <div className="border rounded-xl shadow p-4 mb-4 bg-white dark:bg-gray-900 transition-all duration-300">
             <div className="flex justify-between items-start gap-2">
                 {/* File Info on the left */}
@@ -112,9 +85,7 @@ export const FileCard = ({ file, onAction }: FileCardProps) => {
                     <button onClick={handleDownload} disabled={isProcessing} className="p-2 text-gray-500 hover:text-green-500 disabled:opacity-50" aria-label="Download File" title="Download File">
                         <IconDownload size={20} />
                     </button>
-                    {/* <button onClick={handleDelete} disabled={isProcessing} className="p-2 text-gray-500 hover:text-red-500 disabled:opacity-50" aria-label="Delete File" title="Delete File">
-                        <IconTrash size={20} />
-                    </button> */}
+                    {/*  */}
                     <Dialog open={confirmOpen} onOpenChange={setConfirmOpen}>
                         <DialogTrigger asChild>
                             <button disabled={isProcessing} className="p-2 text-gray-500 hover:text-red-500 disabled:opacity-50" aria-label="Delete File" title="Delete File">

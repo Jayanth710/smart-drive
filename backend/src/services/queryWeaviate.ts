@@ -174,39 +174,3 @@ const deleteWeaviateFile = async (userId: string, fileId: string | undefined, co
 
 }
 export { queryWeaviate, getRecentUploads, deleteWeaviateFile };
-
-// import { WeaviateClient } from "weaviate-client";
-// import getWeaviateClient from "../db/weaviate_client.js";
-// import logger from "../logger.js";
-// import generateQueryEmbedding from "../utils/getQueryEmbedding.js";
-
-// const queryWeaviate = async (client: WeaviateClient, userQuery: string, collectionName: string, queryVector: lost) => {
-
-//     try {
-//         logger.info(`Searching in collection: ${collectionName}`);
-//         const collection = client.collections.get(collectionName);
-
-//         const hybridQuery = await collection.query.hybrid(
-//             userQuery,
-//             {
-//                 vector: queryVector,
-//                 alpha: 0.5,
-//                 limit: 5,
-//                 // filters: myCollection.filter.byProperty("fileName").like(`*${userQuery}`),
-//                 returnMetadata: ['score']
-//             }
-//         );
-//         return hybridQuery.objects.map(obj => ({
-//             ...obj.properties,
-//             score: obj.metadata?.score,
-//             sourceCollection: collectionName
-//         }));
-
-//     } catch (error) {
-//         logger.error('An error occurred during the search operation:', error);
-//         return { status: 500, error: 'Search failed due to an internal error.' };
-//     }
-
-// }
-
-// export default queryWeaviate;

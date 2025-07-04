@@ -86,18 +86,3 @@ def file_extractor(file_path: str, data: dict):
             os.remove(file_path)
             logger.info(f"Deleted temporary file: {file_path}")
 
-    # match file_type:
-    #     case "pdf":
-    #         logger.info("Extracting PDF data...")
-    #         res = extract_data_from_pdf(output_path, data)
-    #         if(not res.get("created")):
-    #             return {
-    #                 "message": res.get("message"),
-    #                 "created": False
-    #             }
-    #         else:
-    #             return {
-    #                 "message": res.get("message"),
-    #                 "created": True,
-    #             }
-

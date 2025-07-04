@@ -12,7 +12,6 @@ export default function DashboardLayout({
           {children}
         </div>
       </SideBar>
-      {/* <UploadFile /> */}
     </div>
   );
 }

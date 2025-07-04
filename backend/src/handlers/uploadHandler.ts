@@ -7,10 +7,9 @@ import { AuthenticatedRequest } from '../middleware/auth.js';
 import UserFile from '../models/userFileModel.js';
 import { getRecentUploads } from '../services/queryWeaviate.js';
 
-// const uploadRouter = Router();
 export const upload = multer({ storage: multer.memoryStorage() });
 
-export const handleFileUpload = async (req: AuthenticatedRequest, res: Response): Promise<void> => {
+const handleFileUpload = async (req: AuthenticatedRequest, res: Response): Promise<void> => {
   try {
 
     const userId = req.user?._id?.toString();
@@ -63,34 +62,17 @@ export const handleFileUpload = async (req: AuthenticatedRequest, res: Response)
       message: "File uploaded successfully",
       gcsUrl: savedFile.gcsUrl,
     });
-
-    // if (uploadRes.isNew) {
-    //   await publishFileMetadata(file, uploadRes.gcsUrl)
-
-    //   res.status(200).json({
-    //     message: 'File uploaded successfully',
-    //     gcsUrl: uploadRes.gcsUrl,
-    //   });
-    // }
-    // else {
-    //   res.status(403).json({
-    //     message: 'File already exists in GCS.',
-    //     gcsUrl: uploadRes.gcsUrl
-    //   })
-    // }
   } catch (error) {
     logger.error('GCS Upload Error:', error);
     res.status(500).send('Upload failed');
   }
 };
 
-export const getUploads = async (req: AuthenticatedRequest, res: Response): Promise<void> => {
+const getUploads = async (req: AuthenticatedRequest, res: Response): Promise<void> => {
   try {
     const userId = req?.user?._id.toString();
-    // const { queryCollection } = req.query;
-    
+
     const queryCollection = typeof req.query.queryCollection === "string" ? req.query.queryCollection : undefined;
-    // const { task } = req.query
 
     if (!userId) {
       res.status(401).send({ message: "User not Found" })
@@ -99,10 +81,13 @@ export const getUploads = async (req: AuthenticatedRequest, res: Response): Prom
     logger.info("Fetching...")
 
     const results = await getRecentUploads(userId!, queryCollection!)
-    res.status(200).send({message: "Fetching Siccessful", data: results});
+    res.status(200).send({ message: "Fetching Siccessful", data: results });
   } catch (error: unknown) {
     res.status(500).send(`Internal Server Error ${error}`);
   }
 }
 
-// export default uploadRouter;
+export {
+  handleFileUpload,
+  getUploads
+};

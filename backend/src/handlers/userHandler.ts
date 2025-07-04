@@ -116,7 +116,7 @@ const getUser = async (req: AuthenticatedRequest, res: Response) => {
     }
 }
 
-const editUser = async (req: AuthenticatedRequest, res: Response) => {
+const updateUser = async (req: AuthenticatedRequest, res: Response) => {
     try {
         const userId = req.user?._id
         console.log("userId:", userId);
@@ -155,5 +155,5 @@ export {
     loginUser,
     registerUser,
     getUser,
-    editUser
+    updateUser
 }

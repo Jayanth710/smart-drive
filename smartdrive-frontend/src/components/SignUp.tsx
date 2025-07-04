@@ -1,14 +1,3 @@
-// import React, { Dispatch, SetStateAction } from 'react'
-
-// const SignUp = (setIsLogin: {setIsLogin: Dispatch<SetStateAction<boolean>>; }) => {
-//   return (
-//     <div>
-
-//     </div>
-//   )
-// }
-
-// export default SignUp
 "use client";
 import React, { Dispatch, SetStateAction, useState } from "react";
 import { Label } from "@/components/ui/label";
@@ -202,9 +191,9 @@ function SignUp({ setIsLogin }: LogInProps) {
                     </button>
                 </div>
             </form>
-            <div className="text-center text-sm text-black" onClick={() => setIsLogin(true)}>
+            <div className="text-center text-sm text-black dark:text-white" onClick={() => setIsLogin(true)}>
                 Already have an account?{" "}
-                <a href="#" className="underline underline-offset-4">
+                <a href="/" className="underline underline-offset-4">
                     Log In
                 </a>
             </div>

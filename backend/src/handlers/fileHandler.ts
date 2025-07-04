@@ -37,8 +37,14 @@ const generateFileSignedUrl = async (req: AuthenticatedRequest, res: Response): 
     const { fileId } = req.params
     const { action } = req.query
 
-    if (!userId) res.status(401).json({ message: 'User not found' });
-    if (!fileId) res.status(400).json({ message: 'File name is required' });
+    if (!userId) {
+        res.status(401).json({ message: 'User not found' })
+        return
+    };
+    if (!fileId) {
+        res.status(400).json({ message: 'File name is required' })
+        return
+    };
 
     try {
 
@@ -47,6 +53,7 @@ const generateFileSignedUrl = async (req: AuthenticatedRequest, res: Response): 
         if (!fileRecord || fileRecord.userId.toString() !== userId) {
             logger.warn(`User ${userId} attempted to access unauthorized file ${fileId}`);
             res.status(403).json({ message: "Forbidden: You do not have access to this file." });
+            return
         }
 
         const file = getUserFile(fileRecord);
@@ -54,6 +61,7 @@ const generateFileSignedUrl = async (req: AuthenticatedRequest, res: Response): 
         const [exists] = await file.exists();
         if (!exists) {
             res.status(404).json({ message: 'File not found' });
+            return
         }
 
         const options: GetSignedUrlConfig = {
