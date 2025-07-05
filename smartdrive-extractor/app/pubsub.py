@@ -64,12 +64,12 @@ def pubsub():
 
             except NotFound:
                 logger.error(f"File '{data.get('fileName')}' not found in GCS. Discarding message.")
-                ack_ids.append(received_message.ack_id)
             except json.JSONDecodeError:
                 logger.error("Failed to decode message data. Discarding message.")
-                ack_ids.append(received_message.ack_id)
             except Exception as e:
                 logger.error(f"❌ Unhandled error processing message for {data.get('fileName')}: {e}", exc_info=True)
+            finally:
+                ack_ids.append(received_message.ack_id)
 
         if ack_ids:
             subscriber.acknowledge(
