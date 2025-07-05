@@ -198,7 +198,7 @@ const deleteWeaviateUser = async (userId: string) => {
         }
     } catch (error) {
         logger.error(`An error occurred while deleting Weaviate data for user ${userId}: ${error}`);
-        throw error;
+        return;
     }
 }
 export { queryWeaviate, getRecentUploads, deleteWeaviateFile, deleteWeaviateUser };

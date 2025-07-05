@@ -99,7 +99,7 @@ const ResetPasswordPage = () => {
                         type="submit"
                         onClick={(e) => handleSubmit(e)}
                     >
-                        Get Reset Link &rarr;
+                        Reset Password &rarr;
                     </button>
                 </div>
             </div>

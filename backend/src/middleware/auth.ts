@@ -20,6 +20,7 @@ export const verifyToken = async (req: AuthenticatedRequest, res: Response, next
 
             if (!req.user) {
                 res.status(401).json({ message: 'Not authorized, user not found' });
+                return
             }
             
             next();
@@ -27,10 +28,12 @@ export const verifyToken = async (req: AuthenticatedRequest, res: Response, next
         } catch (error) {
             logger.error('Token verification failed:', error);
             res.status(401).json({ message: 'Not authorized, token failed' });
+            return
         }
     }
 
     if (!token) {
         res.status(401).json({ message: 'Not authorized, no token provided' });
+        return
     }
 };

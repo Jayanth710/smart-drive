@@ -78,6 +78,23 @@ const SettingsPage = () => {
         }
     };
 
+    const handleAllData = async () => {
+        setIsDeleting(true);
+        try {
+            const res = await apiClient.delete('/api/user/data');
+            if (res.status === 200) {
+                toast.success('All Data Deleted.')
+            }
+            router.push('/dashboard')
+        } catch (err) {
+            console.error("Data deletion failed", err);
+            toast.error("Data deletion failed")
+        }
+        finally {
+            setIsDeleting(false);
+        }
+    }
+
     const handleLogout = async () => {
         logout()
         toast.success('User Logged Out.')
@@ -149,7 +166,34 @@ const SettingsPage = () => {
                 </div>
             </div>
 
-            <Button size='sm' className='flex mt-10 mb-10 cursor-pointer' onClick={handleLogout}>Log Out</Button>
+            <Dialog>
+                <DialogTrigger asChild>
+                    <Button variant="destructive" className='cursor-pointer'>Delete All Data</Button>
+                </DialogTrigger>
+
+                <DialogContent>
+                    <DialogTitle >Delete All Data</DialogTitle>
+                    <DialogDescription>
+                        Are you sure you want to delete your Data? This action cannot be undone.
+                    </DialogDescription>
+
+                    <div className="flex justify-end gap-2 mt-10">
+                        <DialogClose asChild>
+                            <Button variant="outline" className='cursor-pointer'>Cancel</Button>
+                        </DialogClose>
+                        <Button
+                            variant="destructive"
+                            onClick={handleAllData}
+                            disabled={isDeleting}
+                            className='cursor-pointer'
+                        >
+                            {isDeleting ? "Deleting..." : "Confirm Delete"}
+                        </Button>
+                    </div>
+                </DialogContent>
+            </Dialog>
+
+            <Button size='sm' className='flex mt-1 mb-10 cursor-pointer' onClick={handleLogout}>Log Out</Button>
 
             <Dialog>
                 <DialogTrigger asChild>

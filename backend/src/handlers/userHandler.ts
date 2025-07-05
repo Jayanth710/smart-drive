@@ -60,6 +60,7 @@ const loginUser = async (req: Request, res: Response) => {
             email: user.email,
             accessToken: accessToken,
         });
+        return
 
     } catch (error) {
         logger.error('Login Error:', error);
@@ -121,13 +122,16 @@ const getUser = async (req: AuthenticatedRequest, res: Response) => {
 
         if (userDetails) {
             res.status(200).json({ message: 'User details fetched successfully', data: userDetails });
+            return
         }
         else {
             res.status(404).json({ message: 'User not found' });
+            return
         }
     } catch (error) {
         logger.error('Error:', error);
         res.status(500).json({ message: 'Server Error' });
+        return
     }
 }
 
@@ -156,10 +160,12 @@ const updateUser = async (req: AuthenticatedRequest, res: Response) => {
             message: 'User updated successfully',
             data: updatedUser
         });
+        return
 
     } catch (error) {
         console.error('Error updating user:', error);
         res.status(500).json({ message: 'Server error' });
+        return
     }
 }
 
@@ -186,9 +192,11 @@ const changePassword = async (req: AuthenticatedRequest, res: Response): Promise
         logger.info('Password changed successfully')
 
         res.status(200).send({ message: "Password changed successfully" });
+        return
     } catch (error) {
         console.error('Error updating password:', error);
         res.status(500).json({ message: 'Server error' });
+        return
     }
 }
 
@@ -211,9 +219,6 @@ const deleteUser = async (req: AuthenticatedRequest, res: Response) => {
         console.log(`GCS folder for user ${userId} deleted successfully.`);
 
         console.log(`Deleting Weaviate data for user ${userId}...`);
-
-
-
         await deleteWeaviateUser(userId!)
         console.log(`Weaviate data for user ${userId} deleted successfully.`);
 
@@ -226,10 +231,44 @@ const deleteUser = async (req: AuthenticatedRequest, res: Response) => {
         console.log(`User record ${userId} deleted successfully.`);
 
         res.status(200).send({ message: 'Account and all associated data have been successfully deleted.' });
-
+        return
     } catch (error) {
         console.error('Error deleting the account', error);
         res.status(500).json({ message: 'Error occured during deletion of account.' });
+        return
+    }
+}
+
+const deleteUserData = async (req: AuthenticatedRequest, res: Response): Promise<void> => {
+    const userId = req.user?._id.toString()
+    if (!userId) {
+        res.status(401).send({ message: 'Authentication error' });
+        return
+    }
+    try {
+        const user = await User.findById(userId)
+        if (!user) {
+            res.status(404).send({ message: 'User Not Found' })
+            return;
+        }
+
+        console.log(`Deleting GCS folder for user ${userId}...`);
+        await bucket.deleteFiles({ prefix: `${userId}/` });
+        console.log(`GCS folder for user ${userId} deleted successfully.`);
+
+        console.log(`Deleting Weaviate data for user ${userId}...`);
+        await deleteWeaviateUser(userId!)
+        console.log(`Weaviate data for user ${userId} deleted successfully.`);
+
+        console.log(`Deleting UserFile documents for user ${userId}...`);
+        await UserFile.deleteMany({ userId: userId });
+        console.log(`UserFile documents for user ${userId} deleted successfully.`);
+
+        res.status(200).send({ message: 'All associated data have been successfully deleted.' });
+        return
+    } catch (error) {
+        console.error('Error deleting the data', error);
+        res.status(500).json({ message: 'Error occured during deletion of data.' });
         return
     }
 }
@@ -312,6 +351,7 @@ export {
     updateUser,
     changePassword,
     deleteUser,
+    deleteUserData,
     forgotPassword,
     resetPassword
 }

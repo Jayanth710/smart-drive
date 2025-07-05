@@ -9,6 +9,7 @@ const queryHandler = async (req: AuthenticatedRequest, res: Response): Promise<v
 
     if (!userQuery) {
         res.status(400).json({ error: 'Search query "q" is required.' });
+        return
     }
 
     try {
@@ -16,10 +17,12 @@ const queryHandler = async (req: AuthenticatedRequest, res: Response): Promise<v
         logger.info(`${userId} ${userQuery} ${queryCollection}`)
         const response = await queryWeaviate(userId!, userQuery as string, queryCollection as string)
         res.status(200).json(response);
+        return
     }
     catch (error) {
         logger.error('An error occurred during the search operation:', error);
         res.status(500).json({ error: 'Search failed due to an internal error.' });
+        return
     }
 
 }

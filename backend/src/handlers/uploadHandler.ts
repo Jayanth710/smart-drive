@@ -63,9 +63,11 @@ const handleFileUpload = async (req: AuthenticatedRequest, res: Response): Promi
       gcsUrl: savedFile.gcsUrl,
       fileName: savedFile.fileName
     });
+    return
   } catch (error) {
     logger.error('GCS Upload Error:', error);
     res.status(500).send('Upload failed');
+    return
   }
 };
 
@@ -77,14 +79,17 @@ const getUploads = async (req: AuthenticatedRequest, res: Response): Promise<voi
 
     if (!userId) {
       res.status(401).send({ message: "User not Found" })
+      return
     }
 
     logger.info("Fetching...")
 
     const results = await getRecentUploads(userId!, queryCollection!)
     res.status(200).send({ message: "Fetching Siccessful", data: results });
+    return
   } catch (error: unknown) {
     res.status(500).send(`Internal Server Error ${error}`);
+    return
   }
 }
 
