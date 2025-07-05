@@ -259,7 +259,7 @@ const forgotPassword = async (req: Request, res: Response): Promise<void> => {
         }).save()
 
         const resetUrl = `${FRONT_END_URL}/reset-password?token=${token}`;
-        await sendPasswordResetEmail("vunnamjayanth7@gmail.com", resetUrl)
+        await sendPasswordResetEmail(email, resetUrl)
         res.status(200).json({ message: `A reset link has been sent to ${email}.` });
         return
     } catch (error) {
