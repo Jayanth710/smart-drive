@@ -153,7 +153,7 @@ const deleteWeaviateFile = async (userId: string, fileId: string | undefined, co
         )
 
         const response = await collection.query.fetchObjects({
-            limit: 1,
+            limit: 10,
             filters: fileFilters,
         });
 
@@ -162,8 +162,11 @@ const deleteWeaviateFile = async (userId: string, fileId: string | undefined, co
             return true;
         }
 
-        const weaviateUuid = response.objects[0].uuid;
-        await collection.data.deleteById(weaviateUuid);
+        for(const object of response.objects){
+            await collection.data.deleteById(object.uuid);
+            logger.info(`Deleted duplicate Weaviate object with UUID ${object.uuid} for fileId '${fileId}'`);
+        }
+        
 
         logger.info(`Successfully deleted object with fileId '${fileId}' from Weaviate collection '${collectionToDelete}'.`);
         return true;
