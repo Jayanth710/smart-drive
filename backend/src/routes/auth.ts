@@ -1,5 +1,5 @@
 import express from 'express';
-import { registerUser, loginUser, getUser, updateUser }  from '../handlers/userHandler.js';
+import { registerUser, loginUser, getUser, updateUser, changePassword, deleteUser, forgotPassword, resetPassword }  from '../handlers/userHandler.js';
 import { verifyToken } from '../middleware/auth.js';
 
 
@@ -9,5 +9,9 @@ userRouter.post('/login', loginUser);
 userRouter.post('/register', registerUser)
 userRouter.get('/user', verifyToken, getUser)
 userRouter.put('/user/edit', verifyToken, updateUser)
+userRouter.post('/user/changepassword', verifyToken, changePassword)
+userRouter.delete('/user/delete', verifyToken, deleteUser)
+userRouter.post('/forgot-password', forgotPassword)
+userRouter.post('/reset-password', resetPassword)
 
 export default userRouter;

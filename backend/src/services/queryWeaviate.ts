@@ -134,7 +134,7 @@ const getRecentUploads = async (userId: string, queryCollection: string) => {
 }
 
 const deleteWeaviateFile = async (userId: string, fileId: string | undefined, collectionToDelete: string) => {
-    if(!fileId){
+    if (!fileId) {
         logger.error('No fileRecord Found')
         return false
     }
@@ -147,10 +147,10 @@ const deleteWeaviateFile = async (userId: string, fileId: string | undefined, co
 
         const collection = client.collections.get(collectionToDelete)
 
-        const fileFilters= Filters.and(
-                collection.filter.byProperty("user_id").equal(userId),
-                collection.filter.byProperty("file_id").equal(fileId)
-            )
+        const fileFilters = Filters.and(
+            collection.filter.byProperty("user_id").equal(userId),
+            collection.filter.byProperty("file_id").equal(fileId)
+        )
 
         const response = await collection.query.fetchObjects({
             limit: 1,
@@ -164,7 +164,7 @@ const deleteWeaviateFile = async (userId: string, fileId: string | undefined, co
 
         const weaviateUuid = response.objects[0].uuid;
         await collection.data.deleteById(weaviateUuid);
-        
+
         logger.info(`Successfully deleted object with fileId '${fileId}' from Weaviate collection '${collectionToDelete}'.`);
         return true;
     } catch (error) {
@@ -173,4 +173,32 @@ const deleteWeaviateFile = async (userId: string, fileId: string | undefined, co
     }
 
 }
-export { queryWeaviate, getRecentUploads, deleteWeaviateFile };
+
+const deleteWeaviateUser = async (userId: string) => {
+    if (!userId) {
+        logger.info(`${userId} not passed. Skipping deletion`)
+        return;
+    }
+    try {
+        const client = await getWeaviateClient();
+        if (!client) {
+            logger.error("Client not initialized");
+            return;
+        }
+
+        const collectionsToQuery = Object.values(collectionMap);
+        logger.info(`Deleting Weaviate data for user ${userId} from collections: ${collectionsToQuery.join(', ')}`);
+        for (const collectionName of collectionsToQuery) {
+            const collection = client.collections.get(collectionName);
+
+            await collection.data.deleteMany(
+                collection.filter.byProperty("user_id").equal(userId),
+            );
+            logger.info(`Successfully deleted data from collection "${collectionName}" for user ${userId}.`);
+        }
+    } catch (error) {
+        logger.error(`An error occurred while deleting Weaviate data for user ${userId}: ${error}`);
+        throw error;
+    }
+}
+export { queryWeaviate, getRecentUploads, deleteWeaviateFile, deleteWeaviateUser };

@@ -8,18 +8,10 @@ import { FileCard } from "@/components/FileCard";
 import { useFetchCollections } from "@/lib/fetchCollections";
 
 const Home = () => {
-    const { projects, isLoading, error, refreshData } = useFetchCollections ();
+    const { projects, error, refreshData } = useFetchCollections ();
     const [searchResults, setSearchResults] = useState<UploadItem[]>([]);
     const handleAction = () => {
         refreshData();
-    }
-
-    if (isLoading) {
-        return (
-            <div className="flex justify-center items-center flex-1 p-4">
-                <p className="text-lg">Loading Recent Uploads...</p>
-            </div>
-        );
     }
 
     if (error) {

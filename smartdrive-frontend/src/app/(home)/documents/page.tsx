@@ -8,19 +8,11 @@ import React, { useState } from 'react'
 
 const DocumentsPage = () => {
 
-    const { projects, isLoading, error, refreshData } = useFetchCollections ();
+    const { projects, error, refreshData } = useFetchCollections ();
     const [searchResults, setSearchResults] = useState<UploadItem[]>([]);
 
     const handleAction = () => {
         refreshData();
-    }
-
-    if (isLoading) {
-        return (
-            <div className="flex justify-center items-center flex-1 p-4">
-                <p className="text-lg">Loading Documents...</p>
-            </div>
-        );
     }
 
     if (error) {

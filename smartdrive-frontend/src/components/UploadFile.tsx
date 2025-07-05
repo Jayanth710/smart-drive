@@ -36,6 +36,9 @@ export default function UploadFile() {
                     <DialogDescription className="sr-only">
                         Upload your file by selecting or dragging here
                     </DialogDescription>
+                    <div className="text-xs text-muted-foreground">
+                        <span className="font-bold">Note:</span> It may take a few seconds for the uploaded file to appear while we extract its metadata.
+                    </div>
 
                     <FileUpload
                         onChange={() => {

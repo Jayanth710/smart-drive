@@ -8,6 +8,7 @@ import { UploadItem } from "./RecentUploads";
 import apiClient from "@/lib/api";
 import { Button } from "./ui/button";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogTitle, DialogTrigger } from "./ui/dialog";
+import { toast } from "react-toastify";
 
 
 interface FileCardProps {
@@ -30,6 +31,7 @@ export const FileCard = ({ file, onAction }: FileCardProps) => {
             window.open(response.data.url, '_blank');
         } catch (err) {
             setError('Could not get viewable link.');
+            toast.error(error)
             console.error(err);
         } finally {
             setIsProcessing(false);
@@ -44,6 +46,7 @@ export const FileCard = ({ file, onAction }: FileCardProps) => {
             window.location.href = response.data.url;
         } catch (err) {
             setError('Could not get download link.');
+            toast.error(error)
             console.error(err);
         } finally {
             setIsProcessing(false);
@@ -60,16 +63,17 @@ export const FileCard = ({ file, onAction }: FileCardProps) => {
         } catch (err) {
             setError('Could not delete the file.');
             console.error(err);
+            toast.error(error)
         } finally {
             setIsProcessing(false);
         }
     };
 
     return (
-        <div className="border rounded-xl shadow p-4 mb-4 bg-white dark:bg-gray-900 transition-all duration-300">
+        <div className="border rounded-xl shadow p-4 mb-4 bg-white dark:bg-gray-900 transition-all duration-300 hover:cursor-pointer hover:shadow-xl">
             <div className="flex justify-between items-start gap-2">
                 {/* File Info on the left */}
-                <div className="flex-grow min-w-0">
+                <div className="flex-grow min-w-0"  onClick={()=>setShowSummary(!showSummary)}>
                     <h3 className="text-lg font-semibold truncate" title={file.filename}>{file.filename}</h3>
                     <p className="text-sm text-gray-600 dark:text-gray-300">{file.filetype}</p>
                     <p className="text-xs text-gray-500 dark:text-gray-400">

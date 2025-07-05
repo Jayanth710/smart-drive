@@ -32,7 +32,7 @@ const UserProfile = () => {
             if (response.status === 200) {
                 console.log("Profile updated successfully")
                 toast.success("Profile updated successfully")
-                await user()
+                user()
                 setEditingField(null)
             }
         } catch (error) {

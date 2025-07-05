@@ -9,6 +9,7 @@ import { Button } from './ui/button'
 import axios from 'axios'
 import { useAuth } from '@/context/AuthContext'
 import apiClient from '@/lib/api'
+import { toast } from "react-toastify"
 
 type LogInProps = {
     className?: string
@@ -34,31 +35,39 @@ const LogIn: React.FC<LogInProps> = ({ className, setIsLogin, ...props }) => {
     const handleLogin = async (e: React.FormEvent) => {
         e.preventDefault()
 
+        if(!data.email || !data.password){
+            toast.error(`Please enter details to logIn.`)
+            window.location.reload()
+            return
+        }
+
         try {
             const response = await apiClient.post(`/api/login`, data)
             if (response.status === 200) {
                 console.log("Logged in successfully");
                 const { accessToken } = response.data;
                 login(accessToken)
+                toast.success("User succesfully Logged In.")
                 router.push("/dashboard")
             }
 
-            setData({ email: "", password: "" });
-
         } catch (error) {
+            toast.error('Issue while logging in. Try after some time.')
             if (axios.isAxiosError(error) && error.response) {
                 if (error.response.status === 404) {
                     setIsLogin(false); // show signup form
                     setData({ email: "", password: "" });
                 } else {
                     // setError("Invalid credentials");
-                    console.log(error);
                 }
             }
             else {
-                // setError("Something went wrong");
+                toast.error("Something went wrong");
                 console.error(error);
             }
+        }
+        finally{
+            setData({ email: "", password: "" });
         }
 
     }
@@ -91,7 +100,7 @@ const LogIn: React.FC<LogInProps> = ({ className, setIsLogin, ...props }) => {
                                     <div className="flex items-center">
                                         <Label htmlFor="password">Password</Label>
                                         <a
-                                            href="#"
+                                            href="/forgot-password"
                                             className="ml-auto text-sm underline-offset-2 hover:underline"
                                         >
                                             Forgot your password?

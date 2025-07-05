@@ -28,6 +28,7 @@
     "react-dom": "^19.0.0",
     "react-dropzone": "^14.3.8",
     "react-toastify": "^11.0.5",
+    "sonner": "^2.0.6",
     "tabler": "^1.0.0",
     "tailwind-merge": "^3.3.1"
   },

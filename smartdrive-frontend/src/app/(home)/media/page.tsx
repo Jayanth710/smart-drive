@@ -3,24 +3,16 @@ import { FileCard } from '@/components/FileCard'
 import RecentUploads, { UploadItem } from '@/components/RecentUploads'
 import SearchBar from '@/components/Search'
 import { HoverEffect } from '@/components/ui/card-hover-effect'
-import { useFetchCollections } from '@/lib/fetchCollections' 
+import { useFetchCollections } from '@/lib/fetchCollections'
 import React, { useState } from 'react'
 
 const MediaPage = () => {
 
-    const { projects, isLoading, error, refreshData } = useFetchCollections ();
+    const { projects, error, refreshData } = useFetchCollections();
     const [searchResults, setSearchResults] = useState<UploadItem[]>([]);
 
     const handleAction = () => {
         refreshData();
-    }
-
-    if (isLoading) {
-        return (
-            <div className="flex justify-center items-center flex-1 p-4">
-                <p className="text-lg">Loading Media...</p>
-            </div>
-        );
     }
 
     if (error) {

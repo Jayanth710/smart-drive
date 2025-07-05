@@ -12,6 +12,7 @@ import { motion } from "motion/react";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/context/AuthContext";
 import { useRouter } from "next/navigation";
+import { toast } from "react-toastify";
 
 
 interface SideBarProps {
@@ -39,7 +40,7 @@ const SideBar = ({ children }: SideBarProps) => {
         },
         {
             label: "Settings",
-            href: "#",
+            href: "/settings",
             icon: (
                 <IconSettings className="h-5 w-5 shrink-0 text-neutral-700 dark:text-neutral-200" />
             ),
@@ -52,6 +53,7 @@ const SideBar = ({ children }: SideBarProps) => {
             ),
             onClick: () => {
                 logout()
+                toast.success("User Logged Out")
                 router.push("/")
             }
         },
@@ -78,7 +80,7 @@ const SideBar = ({ children }: SideBarProps) => {
                         <SidebarLink
                             link={{
                                 label: `${data?.firstName} ${data?.lastName}`,
-                                href: "#",
+                                href: "/dashboard",
                                 icon: (
                                     <Image
                                         src="/Avatar.svg"
@@ -101,7 +103,7 @@ const SideBar = ({ children }: SideBarProps) => {
 export const Logo = () => {
     return (
         <a
-            href="/homepage"
+            href="/dashboard"
             className="relative z-20 flex items-center space-x-2 py-1 text-xl font-normal text-black"
         >
             <Image
@@ -124,7 +126,7 @@ export const Logo = () => {
 export const LogoIcon = () => {
     return (
         <a
-            href="/homepage"
+            href="/dashboard"
             className="relative z-20 flex items-center space-x-2 py-1 text-sm font-normal text-black"
         >
             <Image

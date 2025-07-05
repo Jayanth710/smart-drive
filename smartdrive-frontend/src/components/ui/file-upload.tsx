@@ -7,6 +7,7 @@ import { useDropzone } from "react-dropzone";
 import apiClient from "@/lib/api";
 import { AxiosError } from "axios";
 import MultiStepLoaderDemo from "../Uploading";
+import { toast } from "react-toastify";
 
 const mainVariant = {
   initial: {
@@ -91,6 +92,7 @@ export const FileUpload = ({
       if (res.status === 200) {
         setLoading(false);
         setUploadError("File already exists");
+        toast.error(uploadError)
         return;
         // throw new Error("File already exists");
       }
@@ -98,10 +100,12 @@ export const FileUpload = ({
       const axiosError = error as AxiosError;
       if (axiosError.response && axiosError.response.status === 404) {
         console.log("File does not exist. Proceeding to upload.")
+        toast.success("File does not exist. Proceeding to upload.")
       } else {
         console.error(error);
         setUploadError("Error checking file existence");
         setLoading(false);
+        toast.error(uploadError)
         return;
       }
     }
@@ -123,10 +127,12 @@ export const FileUpload = ({
       setLoading(false);
       setSuccessMessage("Uploaded successfully!");
       console.log("Uploaded successfully", res.data);
+      toast.success(`${res.data?.fileName} Uploaded successfully`)
     } catch (err) {
       setUploadError("Upload failed");
       setLoading(false);
       console.error(err);
+      toast.error(uploadError)
     }
   };
 

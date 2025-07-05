@@ -61,6 +61,7 @@ const handleFileUpload = async (req: AuthenticatedRequest, res: Response): Promi
     res.status(200).json({
       message: "File uploaded successfully",
       gcsUrl: savedFile.gcsUrl,
+      fileName: savedFile.fileName
     });
   } catch (error) {
     logger.error('GCS Upload Error:', error);

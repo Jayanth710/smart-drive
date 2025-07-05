@@ -11,6 +11,8 @@ import {
 // import { useRouter } from "next/navigation";
 import axios from "axios";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
+import { toast } from "react-toastify";
 
 type LogInProps = {
     className?: string
@@ -32,7 +34,7 @@ const PORT = 4000
 const URL = `http://localhost:${PORT}`
 function SignUp({ setIsLogin }: LogInProps) {
     // const [loading, setLoading] = useState(false);
-    // const [error, setError] = useState("");
+    const [error, setError] = useState("");
     const [data, setData] = useState<SignUpFormData>({
         firstname: "",
         lastname: "",
@@ -41,7 +43,7 @@ function SignUp({ setIsLogin }: LogInProps) {
         re_password: "",
         phone: ""
     })
-    // const router = useRouter()
+    const router = useRouter()
 
     const onChangeHandler = (event: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
         setData({
@@ -54,13 +56,13 @@ function SignUp({ setIsLogin }: LogInProps) {
     const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
         e.preventDefault();
         // setLoading(true);
-        // setError("");
+        setError("");
 
         try {
             // Send login data to the backend
             if (data.password !== data.re_password) {
                 // setError("Password and re-password do not match.")
-                alert("Password and re-password do not match.")
+                toast.error("Password and re-password do not match.")
                 return
             }
 
@@ -73,9 +75,12 @@ function SignUp({ setIsLogin }: LogInProps) {
             };
 
             const response = await axios.post(`${URL}/api/register`, payload);
-            console.log(response.data);
+            console.log(response.data.message)
             if (response.status === 201) {
+                console.log('User Registered')
+                toast.success(`${data.email} registration done was succesfull.`)
                 setIsLogin(true)
+                router.push('/')
             }
 
             setData({
@@ -87,12 +92,31 @@ function SignUp({ setIsLogin }: LogInProps) {
                 phone: ""
             });
         } catch (err: unknown) {
-            if (axios.isAxiosError(err) && err.response?.status === 404) {
-                setIsLogin(false)
+            if (axios.isAxiosError(err) && err.response) {
+                // setIsLogin(false)
+                console.error("Backend Error:", err.response.data.message);
+                toast.error(`Backend Error: ${err.response.data.message}`)
+                // Set the error message to display to the user
+                setError(err.response.data.message);
             }
             // setError("Login failed. Please check your credentials.");
-        } finally {
-            // setLoading(false);
+            else {
+                // Handle non-Axios errors or other unexpected issues
+                setError("An unexpected error occurred. Please try again.");
+                toast.error("An unexpected error occurred. Please try again.")
+                console.error(error);
+
+            }
+        }
+        finally{
+            setData({
+                firstname: "",
+                lastname: "",
+                email: "",
+                password: "",
+                re_password: "",
+                phone: ""
+            });
         }
     };
     return (
