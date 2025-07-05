@@ -13,6 +13,7 @@ import axios from "axios";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { toast } from "react-toastify";
+import { Button } from "./ui/button";
 
 type LogInProps = {
     className?: string
@@ -53,7 +54,7 @@ function SignUp({ setIsLogin }: LogInProps) {
         })
     }
 
-    const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
+    const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
         // setLoading(true);
         setError("");
@@ -108,7 +109,7 @@ function SignUp({ setIsLogin }: LogInProps) {
 
             }
         }
-        finally{
+        finally {
             setData({
                 firstname: "",
                 lastname: "",
@@ -119,6 +120,10 @@ function SignUp({ setIsLogin }: LogInProps) {
             });
         }
     };
+
+    const handleDevelop = () => {
+        toast.info('Feature under development.')
+    }
     return (
         <div className="shadow-2xl mx-auto w-full max-w-md rounded-none bg-white p-4 md:rounded-2xl md:p-6 dark:bg-black">
             <h2 className="text-xl font-bold text-neutral-800 dark:text-neutral-200">
@@ -176,6 +181,7 @@ function SignUp({ setIsLogin }: LogInProps) {
                 <button
                     className="group/btn relative block h-10 w-full rounded-md bg-gradient-to-br from-black to-neutral-600 font-medium text-white shadow-[0px_1px_0px_0px_#ffffff40_inset,0px_-1px_0px_0px_#ffffff40_inset] dark:bg-zinc-800 dark:from-zinc-900 dark:to-zinc-900 dark:shadow-[0px_1px_0px_0px_#27272a_inset,0px_-1px_0px_0px_#27272a_inset]"
                     type="submit"
+                    onClick={(e)=>handleSubmit(e)}
                 >
                     Sign up &rarr;
                     <BottomGradient />
@@ -184,36 +190,30 @@ function SignUp({ setIsLogin }: LogInProps) {
                 <div className="my-8 h-[1px] w-full bg-gradient-to-r from-transparent via-neutral-300 to-transparent dark:via-neutral-700" />
 
                 <div className="grid grid-cols-3 gap-4">
-                    <button
-                        className="group/btn shadow-input relative flex h-10 w-full items-center justify-start space-x-2 rounded-md bg-gray-50 px-4 font-medium text-black dark:bg-zinc-900 dark:shadow-[0px_0px_1px_1px_#262626] cursor-pointer"
-                        type="submit"
-                    >
+                    <Button variant="outline" className="w-full cursor-pointer" onClick={handleDevelop} type="button">
                         <IconBrandGithub className="h-4 w-4 text-neutral-800 dark:text-neutral-300" />
                         <span className="text-sm text-neutral-700 dark:text-neutral-300">
                             GitHub
                         </span>
                         <BottomGradient />
-                    </button>
-                    <button
-                        className="group/btn shadow-input relative flex h-10 w-full items-center justify-start space-x-2 rounded-md bg-gray-50 px-4 font-medium text-black dark:bg-zinc-900 dark:shadow-[0px_0px_1px_1px_#262626] cursor-pointer"
-                        type="submit"
-                    >
+                        <span className="sr-only">Login with Apple</span>
+                    </Button>
+                    <Button variant="outline" className="w-full cursor-pointer" onClick={handleDevelop} type="button">
                         <IconBrandGoogle className="h-4 w-4 text-neutral-800 dark:text-neutral-300" />
                         <span className="text-sm text-neutral-700 dark:text-neutral-300">
                             Google
                         </span>
                         <BottomGradient />
-                    </button>
-                    <button
-                        className="group/btn shadow-input relative flex h-10 w-full items-center justify-start space-x-2 rounded-md bg-gray-50 px-4 font-medium text-black dark:bg-zinc-900 dark:shadow-[0px_0px_1px_1px_#262626] cursor-pointer"
-                        type="submit"
-                    >
+                        <span className="sr-only">Login with Apple</span>
+                    </Button>
+                    <Button variant="outline" className="w-full cursor-pointer" onClick={handleDevelop} type="button">
                         <IconBrandApple className="h-4 w-4 text-neutral-800 dark:text-neutral-300" />
                         <span className="text-sm text-neutral-700 dark:text-neutral-300">
                             Apple
                         </span>
                         <BottomGradient />
-                    </button>
+                        <span className="sr-only">Login with Google</span>
+                    </Button>
                 </div>
             </form>
             <div className="text-center text-sm text-black dark:text-white" onClick={() => setIsLogin(true)}>
