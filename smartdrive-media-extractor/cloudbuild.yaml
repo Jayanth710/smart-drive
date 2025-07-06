@@ -1,3 +1,35 @@
+# steps:
+#   # Step 1: Build the Docker image
+#   - name: 'gcr.io/cloud-builders/docker'
+#     dir: 'smartdrive-media-extractor'
+#     args: ['build', '-t', 'us-central1-docker.pkg.dev/smartdrive-461502/smartdrive-repo/smartdrive-media-extractor', '.']
+
+#   # Step 2: Push the image to Artifact Registry
+#   - name: 'gcr.io/cloud-builders/docker'
+#     args: ['push', 'us-central1-docker.pkg.dev/smartdrive-461502/smartdrive-repo/smartdrive-media-extractor']
+
+#   # Step 3: Deploy to Cloud Run
+#   - name: 'gcr.io/google.com/cloudsdktool/cloud-sdk'
+#     entrypoint: gcloud
+#     args:
+#       - 'run'
+#       - 'deploy'
+#       - 'smartdrive-media-extractor'
+#       - '--image=us-central1-docker.pkg.dev/smartdrive-461502/smartdrive-repo/smartdrive-media-extractor'
+#       - '--region=us-central1'
+#       - '--platform=managed'
+#       - '--allow-unauthenticated'
+#       - '--memory=4Gi'
+#       - '--cpu=2'
+#       - '--set-env-vars'
+#       - 'GOOGLE_API_KEY=AIzaSyC5OFQavbMAiFLqI-1hI9-9ljuvF2LHTe0, WEAVIATE_URL=https://exjbm8glqcuh7dvo5fscrg.c0.us-west3.gcp.weaviate.cloud, WEAVIATE_API_KEY=a0pzUUhsZldVWk5UdzZhV19RcWRBV2twN05UUk9YWFkwQWlPcHFFRCtrZEhvZkIyYUZpNGhVNkd1UnZZPV92MjAw, GCP_PROJECT_ID=smartdrive-461502, PUBSUB_SUBSCRIPTION_ID=smartdrive-media-extract-sub'
+
+# images:
+#   - us-central1-docker.pkg.dev/smartdrive-461502/smartdrive-repo/smartdrive-media-extractor
+
+# options:
+#   logging: CLOUD_LOGGING_ONLY
+
 steps:
   # Step 1: Build the Docker image
   - name: 'gcr.io/cloud-builders/docker'
@@ -21,8 +53,7 @@ steps:
       - '--allow-unauthenticated'
       - '--memory=4Gi'
       - '--cpu=2'
-      - '--set-env-vars'
-      - 'GOOGLE_API_KEY=AIzaSyC5OFQavbMAiFLqI-1hI9-9ljuvF2LHTe0, WEAVIATE_URL=https://exjbm8glqcuh7dvo5fscrg.c0.us-west3.gcp.weaviate.cloud, WEAVIATE_API_KEY=a0pzUUhsZldVWk5UdzZhV19RcWRBV2twN05UUk9YWFkwQWlPcHFFRCtrZEhvZkIyYUZpNGhVNkd1UnZZPV92MjAw, GCP_PROJECT_ID=smartdrive-461502, PUBSUB_SUBSCRIPTION_ID=smartdrive-media-extract-sub'
+      - '--set-secrets=GOOGLE_API_KEY=projects/smartdrive-461502/secrets/GOOGLE_API_KEY:latest,WEAVIATE_API_KEY=projects/smartdrive-461502/secrets/WEAVIATE_API_KEY:latest,WEAVIATE_URL=projects/smartdrive-461502/secrets/WEAVIATE_URL:latest,GCP_PROJECT_ID=projects/smartdrive-461502/secrets/GCP_PROJECT_ID:latest,PUBSUB_MEDIA_SUBSCRIPTION_ID=projects/smartdrive-461502/secrets/PUBSUB_MEDIA_SUBSCRIPTION_ID:latest'
 
 images:
   - us-central1-docker.pkg.dev/smartdrive-461502/smartdrive-repo/smartdrive-media-extractor

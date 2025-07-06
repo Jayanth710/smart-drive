@@ -1,27 +1,10 @@
 # 🚀 SmartDrive: An Intelligent Content Platform
 
-> **Your personal second brain for intelligent, privacy-first content management.**
-
----
-
-## 📑 Table of Contents
-
-1. [Introduction](#introduction)
-2. [The Problem & Our Solution](#the-problem--our-solution)
-3. [Technology Stack](#technology-stack)
-4. [Microservice Architecture](#microservice-architecture)
-5. [Features Implemented](#features-implemented)
-6. [smartdrive-extractor (Documents)](#smartdrive-extractor-documents)
-7. [smartdrive-image-extractor (Images)](#smartdrive-image-extractor-images)
-8. [smartdrive-media-extractor (Audio--Video)](#smartdrive-media-extractor-audio--video)
-9. [Local Development Setup](#local-development-setup)
-10. [Environment Variables](#environment-variables)
-
----
+> **Your personal application for intelligent, content management.**
 
 ## 1. Introduction
 
-SmartDrive is a full-stack, cloud-native application designed to be your personal “second brain.” It allows you to securely upload, process, and search a wide variety of files — including documents, images, and media.  
+SmartDrive is a full-stack, cloud-native application designed to be your personal content manager. It allows you to securely upload, process, and search a wide variety of files — including documents, images, and media.  
 
 At its core, SmartDrive uses a sophisticated AI pipeline to automatically understand file content, generate concise summaries, and make everything instantly searchable through an intuitive web interface.  
 
@@ -51,7 +34,7 @@ For high-quality reasoning, SmartDrive uses the Google Gemini API, combining pow
 **Open-Source Models Used**:
 - Document Parsing: `unstructured`
 - Image OCR: `EasyOCR`
-- Audio Transcription: `faster-whisper`
+- Audio Transcription and Video: `faster-whisper and ffmpeg`
 
 ---
 
@@ -62,7 +45,7 @@ For high-quality reasoning, SmartDrive uses the Google Gemini API, combining pow
 | **Frontend**        | React, Next.js (App Router), TypeScript, Tailwind CSS, Axios                                              |
 | **Backend**         | Node.js, Express.js, TypeScript, MongoDB, Mongoose                                                        |
 | **Authentication**  | JWT (Access & Refresh Tokens), bcrypt                                                                     |
-| **AI / Processing** | Python, unstructured, EasyOCR, faster-whisper, Google Gemini API                                          |
+| **AI / Processing** | Python, unstructured, EasyOCR, faster-whisper, ffmpeg, Google Gemini API                                          |
 | **Database & Search** | Weaviate (Vector Database), MongoDB (Metadata)                                                          |
 | **Cloud & DevOps**  | Google Cloud Platform (GCP), Docker, Cloud Run, Cloud Storage (GCS), Pub/Sub, Cloud Build, GitHub Actions |
 
@@ -75,10 +58,10 @@ SmartDrive uses a **decoupled, event-driven architecture** for scalability and r
 **Data Flow:**
 
 1. **Upload**  
-   User uploads a file via the Next.js frontend.  
+   Authenticated User uploads a file via the Next.js frontend.  
 
 2. **Backend Router**  
-   Node.js backend saves the file to a user-specific GCS bucket, stores metadata in MongoDB, and publishes a Pub/Sub message based on MIME type.
+   Node.js backend saves the file to a user-specific GCS bucket, stores fileHash in MongoDB, and publishes a Pub/Sub message based on MIME type.
 
 3. **Specialized Processing**  
    One of three Python microservices, each listening to its own Pub/Sub topic, picks up the message.

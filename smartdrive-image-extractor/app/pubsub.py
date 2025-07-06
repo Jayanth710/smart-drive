@@ -9,7 +9,7 @@ from google.api_core.exceptions import NotFound
 logger = logging.getLogger(__name__)
 
 PROJECT_ID = os.getenv("GCP_PROJECT_ID", "smartdrive-461502")
-SUBSCRIPTION_ID = os.getenv("PUBSUB_SUBSCRIPTION_ID", "smartdrive-image-extract-sub")
+SUBSCRIPTION_ID = os.getenv("PUBSUB_IMAGE_SUBSCRIPTION_ID", "smartdrive-image-extract-sub")
 MAX_MESSAGES_PER_PULL = 10
 credentials = None
 

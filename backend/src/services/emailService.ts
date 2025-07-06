@@ -6,8 +6,8 @@ export const sendPasswordResetEmail = async (to: string, resetLink: string) => {
     const transporter = nodemailer.createTransport({
       service: "gmail",
       auth: {
-        user: process.env.GMAIL_USER || "vunnamjayanthchowdary@gmail.com",
-        pass: process.env.GMAIL_APP_PASSWORD || "dsiq kstu mevh ingy"
+        user: process.env.GMAIL_USER || "yourgmail@gmail.com",
+        pass: process.env.GMAIL_APP_PASSWORD || ""
       }
     });
 
