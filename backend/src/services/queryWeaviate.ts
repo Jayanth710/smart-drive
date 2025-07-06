@@ -126,6 +126,7 @@ const getRecentUploads = async (userId: string, queryCollection: string) => {
 
             results.push(...res.objects.map(obj => obj.properties as SmartDriveSchema));
         }
+        results.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
         return results;
     } catch (error) {
         console.error("Error in getUploads:", error);
