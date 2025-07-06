@@ -1,7 +1,12 @@
 
 import nodemailer from "nodemailer";
+import logger from "../logger.js";
 
 export const sendPasswordResetEmail = async (to: string, resetLink: string) => {
+  if(!process.env.GMAIL_USER || process.env.GMAIL_APP_PASSWOR){
+    logger.error("Credentails for nodemailer GMAIL_USER, GMAIL_APP_PASSWOR are missing ");
+    return;
+  }
   try {
     const transporter = nodemailer.createTransport({
       service: "gmail",

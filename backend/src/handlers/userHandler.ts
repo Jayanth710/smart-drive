@@ -11,13 +11,13 @@ import { deleteWeaviateUser } from '../services/queryWeaviate.js';
 import UserResetPassword from '../models/userResetPasswordModel.js';
 import { sendPasswordResetEmail } from '../services/emailService.js';
 
+const URL = `http://localhost:3000`
 const generateAccessToken = (id: string) => {
     return jwt.sign({ id }, process.env.JWT_SECRET!, {
         expiresIn: '1d', // Expires in 15 minutes
     });
 };
 
-const FRONT_END_URL = 'https://smart-drive-eta.vercel.app'
 const generaterefreshToken = async (id: string) => {
     return jwt.sign({ id }, process.env.JWT_REFRESH_SECRET!, {
         expiresIn: '1d',
@@ -297,7 +297,7 @@ const forgotPassword = async (req: Request, res: Response): Promise<void> => {
             expiresAt: Date.now() + 10 * 60 * 1000
         }).save()
 
-        const resetUrl = `${FRONT_END_URL}/reset-password?token=${token}`;
+        const resetUrl = `${process.env.FRONT_END_URL || URL}/reset-password?token=${token}`;
         await sendPasswordResetEmail(email, resetUrl)
         res.status(200).json({ message: `A reset link has been sent to ${email}.` });
         return

@@ -38,7 +38,7 @@ const userFileSchema = new mongoose.Schema(
         }
     },
     {
-        timestamps: true,  // adds createdAt and updatedAt
+        timestamps: true,
     }
 );
 
