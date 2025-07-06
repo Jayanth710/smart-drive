@@ -53,6 +53,7 @@ steps:
       - '--allow-unauthenticated'
       - '--memory=4Gi'
       - '--cpu=2'
+      - '--remove-env-vars=GOOGLE_API_KEY,WEAVIATE_API_KEY,WEAVIATE_URL,GCP_PROJECT_ID,PUBSUB_MEDIA_SUBSCRIPTION_ID'
       - '--set-secrets=GOOGLE_API_KEY=projects/smartdrive-461502/secrets/GOOGLE_API_KEY:latest,WEAVIATE_API_KEY=projects/smartdrive-461502/secrets/WEAVIATE_API_KEY:latest,WEAVIATE_URL=projects/smartdrive-461502/secrets/WEAVIATE_URL:latest,GCP_PROJECT_ID=projects/smartdrive-461502/secrets/GCP_PROJECT_ID:latest,PUBSUB_MEDIA_SUBSCRIPTION_ID=projects/smartdrive-461502/secrets/PUBSUB_MEDIA_SUBSCRIPTION_ID:latest'
 
 images:

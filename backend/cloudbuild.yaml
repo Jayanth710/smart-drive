@@ -51,6 +51,7 @@ steps:
       - '--platform=managed'
       - '--allow-unauthenticated'
       - '--port=4000'
+      - '--remove-env-vars=GOOGLE_API_KEY,WEAVIATE_API_KEY,WEAVIATE_URL,MONGO_URI,JWT_SECRET,JWT_REFRESH_SECRET,GMAIL_USER,GMAIL_APP_PASSWORD'
       - '--set-secrets=GOOGLE_API_KEY=projects/smartdrive-461502/secrets/GOOGLE_API_KEY:latest,WEAVIATE_API_KEY=projects/smartdrive-461502/secrets/WEAVIATE_API_KEY:latest,WEAVIATE_URL=projects/smartdrive-461502/secrets/WEAVIATE_URL:latest,MONGO_URI=projects/smartdrive-461502/secrets/MONGO_URI:latest,JWT_SECRET=projects/smartdrive-461502/secrets/JWT_SECRET:latest,JWT_REFRESH_SECRET=projects/smartdrive-461502/secrets/JWT_REFRESH_SECRET:latest,GMAIL_USER=projects/smartdrive-461502/secrets/GMAIL_USER:latest,GMAIL_APP_PASSWORD=projects/smartdrive-461502/secrets/GMAIL_APP_PASSWORD:latest'
 
 images:
