@@ -44,38 +44,35 @@ def pubsub():
             logger.info("No messages in queue. Exiting.")
             return
 
-        ack_ids = []
         for received_message in response.received_messages:
-            data = {}
+            ack_id = received_message.ack_id
             try:
-
                 data = json.loads(received_message.message.data.decode("utf-8"))
-                
+
                 if "gcsUrl" not in data or "fileName" not in data:
-                    logger.error("Message is missing 'gcsUrl' or 'fileName'. Discarding.")
-                    ack_ids.append(received_message.ack_id)
+                    logger.warning("Missing required fields, discarding this message.")
+                    subscriber.acknowledge(
+                        request={"subscription": subscription_path, "ack_ids": [ack_id]}
+                    )
                     continue
 
-                logger.info(f"Processing message for file: {data['fileName']}")
-                download_from_gcs(data) 
+                download_from_gcs(data)
 
-                ack_ids.append(received_message.ack_id)
-                logger.info(f"Successfully processed {data['fileName']}.")
+                logger.info(f"✅ Successfully processed {data['fileName']}")
+                subscriber.acknowledge(
+                    request={"subscription": subscription_path, "ack_ids": [ack_id]}
+                )
 
-            except NotFound:
-                logger.error(f"File '{data.get('fileName')}' not found in GCS. Discarding message.")
             except json.JSONDecodeError:
-                logger.error("Failed to decode message data. Discarding message.")
+                logger.error("Malformed JSON — will discard message.")
+                subscriber.acknowledge(
+                    request={"subscription": subscription_path, "ack_ids": [ack_id]}
+                )
             except Exception as e:
-                logger.error(f"❌ Unhandled error processing message for {data.get('fileName')}: {e}", exc_info=True)
-            finally:
-                ack_ids.append(received_message.ack_id)
-
-        if ack_ids:
-            subscriber.acknowledge(
-                request={"subscription": subscription_path, "ack_ids": ack_ids}
-            )
-            logger.info(f"Acknowledged {len(ack_ids)} messages.")
+                logger.error(f"❌ Fatal error processing {data.get('fileName', 'unknown')}: {e}", exc_info=True)
+                subscriber.acknowledge(
+                    request={"subscription": subscription_path, "ack_ids": [ack_id]}
+                )
 
     except Exception as e:
         logger.error(f"An error occurred during the pull-and-process cycle: {e}", exc_info=True)
