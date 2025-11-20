@@ -133,7 +133,7 @@ def upload_to_weaviate(data: dict, user_summary: str, index_json: json, embeddin
             "file_id": str(data.get("_id")),
             "user_id": data.get("userId"),
             "summary": user_summary,
-            "index_json": index_json,
+            "index_json": json.dumps(index_json, ensure_ascii=False),
             "filetype": data.get("fileType"),
             "created_at": data.get("uploadedAt")
         }
