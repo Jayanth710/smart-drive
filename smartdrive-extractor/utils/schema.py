@@ -52,10 +52,8 @@ DOC_SUMMARY_SCHEMA = {
                 "entities",
                 "document_ids",
                 "technical_topics",
-            ],
-            "additionalProperties": False,
+            ]
         },
     },
-    "required": ["user_summary_markdown", "index_json"],
-    "additionalProperties": False,
+    "required": ["user_summary_markdown", "index_json"]
 }
