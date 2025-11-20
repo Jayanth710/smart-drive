@@ -38,6 +38,11 @@ const queryWeaviate = async (userId: string, userQuery: string, queryCollection:
             }
 
             for (const collectionName of collectionsToQuery) {
+                const exists = await client.collections.exists(collectionName);
+                if(!exists){
+                    logger.info(`Collection ${collectionName} does not have any files`);
+                    continue;
+                }
                 const collection = client.collections.get<SmartDriveSchema>(collectionName);
                 const userFilter = Filters.and(
                     collection.filter.byProperty("user_id").equal(userId),
@@ -116,6 +121,13 @@ const getRecentUploads = async (userId: string, queryCollection: string) => {
         const results: SmartDriveSchema[] = [];
 
         for (const collectionName of collectionsToQuery) {
+            const exists = await client.collections.exists(collectionName);
+
+            if (!exists) {
+                logger.info(`Weaviate collection "${collectionName}" does not exist`);
+                continue;
+            }
+
             const collection = client.collections.get<SmartDriveSchema>(collectionName);
 
             const res = await collection.query.fetchObjects({
@@ -163,11 +175,11 @@ const deleteWeaviateFile = async (userId: string, fileId: string | undefined, co
             return true;
         }
 
-        for(const object of response.objects){
+        for (const object of response.objects) {
             await collection.data.deleteById(object.uuid);
             logger.info(`Deleted duplicate Weaviate object with UUID ${object.uuid} for fileId '${fileId}'`);
         }
-        
+
 
         logger.info(`Successfully deleted object with fileId '${fileId}' from Weaviate collection '${collectionToDelete}'.`);
         return true;

@@ -14,6 +14,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { toast } from "react-toastify";
 import { Button } from "./ui/button";
+import apiClient from "@/lib/api";
 
 type LogInProps = {
     className?: string
@@ -75,7 +76,7 @@ function SignUp({ setIsLogin }: LogInProps) {
                 phone: data.phone,
             };
 
-            const response = await axios.post(`${URL}/api/register`, payload);
+            const response = await apiClient.post(`api/register`, payload)//axios.post(`${URL}/api/register`, payload);
             console.log(response.data.message)
             if (response.status === 201) {
                 console.log('User Registered')
