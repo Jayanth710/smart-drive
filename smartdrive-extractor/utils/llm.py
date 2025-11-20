@@ -5,7 +5,7 @@ from venv import logger
 from langchain_text_splitters import CharacterTextSplitter
 import google.generativeai as genai
 from dotenv import load_dotenv
-from schema import DOC_SUMMARY_SCHEMA
+from utils.schema import DOC_SUMMARY_SCHEMA
 
 load_dotenv()
 
