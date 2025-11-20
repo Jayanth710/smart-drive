@@ -1,3 +1,4 @@
+import json
 import weaviate.classes as wvc
 import logging
 from app.weaviate_client import get_weaviate_client
@@ -68,6 +69,11 @@ def setup_weaviate_schema():
                 description="The timestamp of when the file was uploaded",
                 index_filterable=True
             ),
+            wvc.config.Property(
+                name="index_json",
+                data_type=wvc.config.DataType.TEXT, 
+                description="Raw JSON blob of metadata",
+            ),
             ],
             vectorizer_config=wvc.config.Configure.Vectorizer.none(),
         )
@@ -108,7 +114,7 @@ def check_file_exists(file_id: str, user_id: str):
         return None
 
 
-def upload_to_weaviate(data: dict, summary: str, embedding: list) -> dict:
+def upload_to_weaviate(data: dict, user_summary: str, index_json: json, embedding: list) -> dict:
     """
     Generates a summary and embedding from text, then saves the complete
     record (metadata and vector) to Weaviate in a single, robust function.
@@ -126,7 +132,8 @@ def upload_to_weaviate(data: dict, summary: str, embedding: list) -> dict:
             "filename": data.get("fileName"),
             "file_id": str(data.get("_id")),
             "user_id": data.get("userId"),
-            "summary": summary,
+            "summary": user_summary,
+            "index_json": index_json,
             "filetype": data.get("fileType"),
             "created_at": data.get("uploadedAt")
         }

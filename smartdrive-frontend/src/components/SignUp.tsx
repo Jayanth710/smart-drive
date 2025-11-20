@@ -31,9 +31,6 @@ interface SignUpFormData {
     phone: string;
 }
 
-
-const PORT = 4000
-const URL = `http://localhost:${PORT}`
 function SignUp({ setIsLogin }: LogInProps) {
     // const [loading, setLoading] = useState(false);
     const [error, setError] = useState("");

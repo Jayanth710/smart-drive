@@ -50,13 +50,13 @@ def file_extractor(file_path: str, data: dict):
                     "message": "No text extracted from the file",
                     "created": False
                 }
-            summary, embedding = LLM_summarizer(text_extracted)
-            if(not summary or not embedding):
+            user_summary, index_json, embedding = LLM_summarizer(text_extracted)
+            if(not user_summary or not embedding):
                 return {
                     "message": "No summary embedding generated",
                     "created": False
                 }
-            res = upload_to_weaviate(data, summary, embedding)
+            res = upload_to_weaviate(data, user_summary, index_json, embedding)
             if(not res.get("created")):
                 return {
                     "message": res.get("message"),
