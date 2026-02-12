@@ -6,7 +6,7 @@ const genAI = new GoogleGenerativeAI(process.env.GOOGLE_API_KEY!);
 const generateQueryEmbedding = async (query: string) => {
     try {
 
-        const model = genAI.getGenerativeModel({ model: "text-embedding-004" });
+        const model = genAI.getGenerativeModel({ model: "models/gemini-embedding-001" });
         const result = await model.embedContent({
             content: {
                 parts: [{ text: query }],
