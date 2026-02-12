@@ -50,10 +50,17 @@ Present the final description as a single, well-structured concise paragraph."""
 def get_embedding(text):
     """Generates an embedding for the given text using the Google Generative AI API."""
 
-    response = genai.embed_content(
-        model="text-embedding-004",
-        content=text,
-        task_type="SEMANTIC_SIMILARITY",
-        output_dimensionality=768,
-    )
-    return response['embedding']
+    try:
+        response = genai.embed_content(
+            # UPDATED: Use the current standard embedding model
+            model="models/gemini-embedding-001", 
+            content=text,
+            task_type="SEMANTIC_SIMILARITY",
+            output_dimensionality=768,
+        )
+        return response['embedding']
+    except Exception as e:
+        # Log the error properly so you don't crash hard
+        print(f"Error generating embedding: {e}")
+        # Return a zero-vector or None to prevent downstream crashes
+        return [0.0] * 768
