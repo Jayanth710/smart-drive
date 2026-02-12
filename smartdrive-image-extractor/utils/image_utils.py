@@ -8,12 +8,22 @@ from utils.llm import LLM_summarizer, LLM_caption_generator
 
 logger = logging.getLogger(__name__)
 
-try:
-    reader = easyocr.Reader(['en'], gpu=False)
-    logger.info("EasyOCR engine initialized successfully.")
-except Exception as e:
-    logger.error(f"Failed to initialize EasyOCR engine: {e}")
-    reader = None
+# try:
+#     reader = easyocr.Reader(['en'], gpu=False)
+#     logger.info("EasyOCR engine initialized successfully.")
+# except Exception as e:
+#     logger.error(f"Failed to initialize EasyOCR engine: {e}")
+#     reader = None
+
+_reader = None
+
+def get_reader():
+    global _reader
+    if _reader is None:
+        logger.info("Initializing EasyOCR reader...")
+        _reader = easyocr.Reader(['en'], gpu=False)
+        logger.info("EasyOCR engine initialized.")
+    return _reader
 
 def image_classifier(image_path: str, threshold: float = 450.0) -> str:
     """
@@ -50,14 +60,15 @@ def image_ocr(image_path: str):
     Returns:
         A string containing all the extracted text.
     """
-    if not reader:
-        logger.error("OCR failed because the EasyOCR engine is not available.")
-        return "[OCR failed: Engine not initialized]"
-        
     try:
-        logger.info(f"Performing OCR with EasyOCR on: {os.path.basename(image_path)}")
-
+        reader = get_reader()
         result = reader.readtext(image_path)
+    except Exception as e:
+        logger.error(f"Error during EasyOCR processing: {e}", exc_info=True)
+        return "[OCR failed]"
+
+    # result = reader.readtext(image_path)
+    try:
 
         text_lines = [line[1] for line in result]
         structured_text = "\n".join(text_lines)

@@ -1,48 +1,48 @@
-# Byte-compiled / cache
+# Python caches
 __pycache__/
 *.py[cod]
 *.so
 *.pyd
+.pytest_cache/
 
-# Environment / dependency files
-*.venv/
+# Virtual envs
 .venv/
-env/
 venv/
-pip-wheel-metadata/
-poetry.lock
-Pipfile.lock
+env/
+*.venv/
 
-# IDE/editor settings
+# IDE/editor
 .vscode/
 .idea/
 *.swp
 
-# Git
+# Git / OS junk
 .git/
-.gitignore
-
-# OS & editor junk
 .DS_Store
 Thumbs.db
 
-# Logs & temp files
+# Logs / temp
 *.log
 *.tmp
 *.bak
+tmp/
+cache/
 
-# Tests or local-only scripts
-tests/
-test_*.py
-example_*.py
-
-# Output files
-app.log
-*.out
-
-# Docker
-Dockerfile*
-.dockerignore
-
-# Upload folders
+# Local data / artifacts (big)
+data/
+datasets/
+models/
+downloads/
 uploads/
+nltk_data/
+
+# Media / large files (big)
+*.pdf
+*.zip
+*.tar
+*.gz
+*.mp4
+*.wav
+*.png
+*.jpg
+*.jpeg

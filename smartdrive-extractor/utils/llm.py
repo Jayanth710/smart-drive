@@ -75,7 +75,7 @@ def LLM_summarizer(text: str):
     try:
         # response = model.generate_content(prompt)
         model = genai.GenerativeModel(
-            "gemini-2.0-flash",
+            os.getenv("LLM_MODEL", "gemini-2.5-flash"),
             generation_config=genai.GenerationConfig(
                 temperature=0.2,
                 max_output_tokens=2048,

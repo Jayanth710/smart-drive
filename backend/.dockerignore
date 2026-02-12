@@ -1,7 +1,23 @@
+# node_modules
+# dist
+# *.log
+# .git
+# Dockerfile
+# .dockerignore
+# coverage
 node_modules
 dist
-*.log
 .git
-Dockerfile
-.dockerignore
+.vscode
+.DS_Store
+*.log
+.env
+.venv
+__pycache__
 coverage
+tmp
+data
+uploads
+*.pdf
+*.mp4
+*.zip

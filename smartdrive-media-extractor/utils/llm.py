@@ -6,7 +6,7 @@ load_dotenv()
 
 genai.configure(api_key=os.getenv("GOOGLE_API_KEY"))
 
-model = genai.GenerativeModel("gemini-2.0-flash") 
+model = genai.GenerativeModel(os.getenv("LLM_MODEL", "gemini-2.5-flash")) 
 
 def LLM_summarizer(text: str):
     """Summarize a Image file using Gemini model."""
