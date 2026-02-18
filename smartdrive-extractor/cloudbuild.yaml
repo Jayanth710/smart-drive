@@ -2,11 +2,11 @@ steps:
   # Step 1: Build the Docker image
   - name: 'gcr.io/cloud-builders/docker'
     dir: 'smartdrive-extractor'
-    args: ['build', '-t', 'us-central1-docker.pkg.dev/smartdrive-461502/smartdrive-repo/smartdrive-extractor', '.']
+    args: ['build', '-t', 'us-central1-docker.pkg.dev/smartdrive-461502/smartdrive-repo/smartdrive-extractor:$SHORT_SHA', '-f', 'smartdrive-extractor/Dockerfile', '.']
 
   # Step 2: Push the image to Artifact Registry
   - name: 'gcr.io/cloud-builders/docker'
-    args: ['push', 'us-central1-docker.pkg.dev/smartdrive-461502/smartdrive-repo/smartdrive-extractor']
+    args: ['push', 'us-central1-docker.pkg.dev/smartdrive-461502/smartdrive-repo/smartdrive-extractor:$SHORT_SHA']
 
   # Step 3: Deploy to Cloud Run
   - name: 'gcr.io/google.com/cloudsdktool/cloud-sdk'
@@ -15,7 +15,7 @@ steps:
       - run
       - deploy
       - smartdrive-extractor
-      - --image=us-central1-docker.pkg.dev/smartdrive-461502/smartdrive-repo/smartdrive-extractor
+      - --image=us-central1-docker.pkg.dev/smartdrive-461502/smartdrive-repo/smartdrive-extractor:$SHORT_SHA
       - --region=us-central1
       - --platform=managed
       - --allow-unauthenticated
@@ -25,7 +25,7 @@ steps:
       - '--set-secrets=GOOGLE_API_KEY=GOOGLE_API_KEY:latest,WEAVIATE_API_KEY=WEAVIATE_API_KEY:latest,WEAVIATE_URL=WEAVIATE_URL:latest,GCP_PROJECT_ID=GCP_PROJECT_ID:latest,PUBSUB_DATA_SUBSCRIPTION_ID=PUBSUB_DATA_SUBSCRIPTION_ID:latest,LLM_MODEL=LLM_MODEL:latest'
 
 images:
-  - us-central1-docker.pkg.dev/smartdrive-461502/smartdrive-repo/smartdrive-extractor
+  - us-central1-docker.pkg.dev/smartdrive-461502/smartdrive-repo/smartdrive-extractor:$SHORT_SHA
 
 options:
   logging: CLOUD_LOGGING_ONLY

@@ -1,40 +1,38 @@
 import logging
 import os
-from utils.weaviate_utils import check_file_exists, upload_to_weaviate
+import re
+from smartdrive_core.weaviate_client import check_file_exists
 from utils.media_utils import audio_extractor, video_to_audio
-from utils.llm import LLM_summarizer
+from smartdrive_core.llm import LLM_media_summarizer
+from utils.weaviate_utils import save_media
 
 logger = logging.getLogger(__name__)
+
+MEDIA_COLLECTION = "SmartDriveMedia"
 
 def media_extractor(media_path: str, data: dict):
     
     try:
-        filename = data.get("fileName", None)
+        data["fileName"] = re.sub(r"\s+", "_", data.get("fileName", "")).strip()
+        filename = data["fileName"]
+        if not filename:
+            return {"message": "No file name provided", "created": False}
 
-        if filename is None:
-            logger.error(f"No filename")
-            return {
-                "message": f"No filename provided",
-                "created": False
-            }
-        
-        file_id = data.get("_id","")
-        user_id = data.get("userId", "")
-
+        file_id = data.get("_id")
+        user_id = data.get("userId")
         if not file_id or not user_id:
-            return {
-                "message": "Missing required fields in the data",
-                "created": False
-            }
+            return {"message": "Missing required fields (_id/userId)", "created": False}
+
+        mime = (data.get("fileType") or "").lower()
         
-        if(check_file_exists(file_id, user_id)):
+        if(check_file_exists(MEDIA_COLLECTION, file_id, user_id)):
             logger.info(f"Document {filename} already exists in Weaviate. Skipping saving.")
             return {
                 "message": f"Document {filename} already exists in Weaviate.",
                 "created": False
             }
         
-        filetype = data.get("fileType" "").split('/')[0]
+        filetype = mime.split('/')[0]
 
         if filetype in ["audio", "video"]:
             if(filetype == "video"):
@@ -47,25 +45,15 @@ def media_extractor(media_path: str, data: dict):
                     "message": f"No text extracted from the audio.",
                     "created": False
                 }
-            summary, embedding = LLM_summarizer(text_extracted)
-
+            # ---- summarize + embed ----
+            logger.info(f"Summarizing + embedding for {filename}")
+            summary, embedding = LLM_media_summarizer(text_extracted)
             if not summary or not embedding:
-                logger.error(f"Failed to extract any text/caption for '{filename}'. Skipping upload.")
-                return {
-                    "message": f"Could not process image '{filename}'.",
-                    "created": False
-                }
-            
-            res = upload_to_weaviate(data, summary, embedding)
-            if(not res.get("created")):
-                return {
-                    "message": res.get("message"),
-                    "created": False
-                }
-            return {
-                "message": res.get("message"),
-                "created": True,
-            }
+                return {"message": "Failed to generate summary/embedding", "created": False}
+
+            # ---- save ----
+            upload_result = save_media(data, summary, embedding)
+            return {"message": upload_result.get("message", "Saved"), "created": True}
         
         else:
             logger.info(f"File type {filetype} not supported. Skipping saving.")
@@ -80,8 +68,3 @@ def media_extractor(media_path: str, data: dict):
             "message": f"Error occurred during file extraction. {e}",
             "created": False
         }
-
-    finally:
-        if os.path.exists(media_path):
-            os.remove(media_path)
-            logger.info(f"Deleted temporary file: {media_path}")

@@ -1,7 +1,7 @@
 import logging
 from flask import Flask
 from app.environment import Environment
-from app.pubsub import pubsub;
+from app.pubsub import run;
 
 logging.basicConfig(level=logging.INFO,
     format= '%(asctime)s - [%(levelname)s] - %(name)s - %(message)s'
@@ -20,7 +20,7 @@ def create_app(env: Environment = Environment.from_env()) -> Flask:
     @app.route("/", methods=["POST"])
     def trigger_pull():
         logger.info("Cloud Scheduler triggered a pull now.")
-        pubsub()
+        run()
         return {"status": "triggered"}, 200
 
 

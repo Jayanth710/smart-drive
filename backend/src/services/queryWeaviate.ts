@@ -131,7 +131,7 @@ const getRecentUploads = async (userId: string, queryCollection: string) => {
             const collection = client.collections.get<SmartDriveSchema>(collectionName);
 
             const res = await collection.query.fetchObjects({
-                limit: 10,
+                limit: 50,
                 filters: collection.filter.byProperty("user_id").equal(userId),
                 sort: collection.sort.byProperty("created_at" as string, false),
             });

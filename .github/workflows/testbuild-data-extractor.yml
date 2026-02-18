@@ -23,4 +23,4 @@ jobs:
       - name: 📦 Install dependencies with uv
         run: |
           pip install uv
-          uv pip install --system -r requirements.txt
+          uv sync

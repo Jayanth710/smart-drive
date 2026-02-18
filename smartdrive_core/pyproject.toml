@@ -1,0 +1,22 @@
+[project]
+name = "smartdrive-core"
+version = "0.1.0"
+dependencies = [
+  "google-cloud-pubsub",
+  "google-cloud-storage",
+  "python-dotenv",
+  "weaviate-client>=4.15.2",
+  "google-genai",
+  "google-generativeai>=0.8.6",
+  "pillow"
+]
+
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools]
+package-dir = {"" = "src"}
+
+[tool.setuptools.packages.find]
+where = ["src"]

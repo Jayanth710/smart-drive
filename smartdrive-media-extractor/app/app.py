@@ -1,6 +1,6 @@
 import logging
 from flask import Flask
-from app.pubsub import pubsub
+from app.pubsub import run
 
 
 logging.basicConfig(level=logging.INFO,
@@ -20,7 +20,7 @@ def create_app():
     @app.route("/", methods=["POST"])
     def trigger_pull():
         logger.info("Cloud Scheduler triggered a pull now.")
-        pubsub()  # actively run a pull on-demand
+        run()  # actively run a pull on-demand
         return {"status": "triggered"}, 200
 
     return app

@@ -74,9 +74,10 @@ export const publishFileMetadata = async (fileInfo: UserFileType) => {
         let topicNameToSend: string;
         const fileType = fileInfo.fileType;
 
-        if (fileType.startsWith('image/')) {
-            topicNameToSend = pubsubConfig.images.topic;
-        } else if (fileType.startsWith('video/') || fileType.startsWith('audio/')) {
+        // if (fileType.startsWith('image/')) {
+        //     topicNameToSend = pubsubConfig.images.topic;
+        // } else 
+        if (fileType.startsWith('video/') || fileType.startsWith('audio/')) {
             topicNameToSend = pubsubConfig.media.topic;
         } else {
             topicNameToSend = pubsubConfig.documents.topic;
