@@ -21,3 +21,6 @@ dependencies = [
 
 [tool.uv.sources]
 smartdrive-core = { path = "../smartdrive_core" }
+
+[tool.uv]
+override-dependencies = ["av==16.1.0"]
