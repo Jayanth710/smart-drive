@@ -41,7 +41,13 @@ steps:
       - 'smartdrive-extractor/Dockerfile'
       - '.' # The root context
 
-  # Step 2: Deploy to Cloud Run
+  # Step 2: Push the image to Artifact Registry
+  - name: 'gcr.io/cloud-builders/docker'
+    args: 
+      - 'push'
+      - 'us-central1-docker.pkg.dev/smartdrive-461502/smartdrive-repo/smartdrive-extractor:$SHORT_SHA'
+
+  # Step 3: Deploy to Cloud Run
   - name: 'gcr.io/google.com/cloudsdktool/cloud-sdk'
     entrypoint: 'gcloud'
     args:
