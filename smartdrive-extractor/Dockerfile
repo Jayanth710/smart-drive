@@ -184,6 +184,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 RUN pip install --no-cache-dir uv
 RUN python -m venv /opt/venv
 ENV PATH="/opt/venv/bin:$PATH"
+ENV VIRTUAL_ENV="/opt/venv"
 
 # ---- copy shared core (if your service depends on it as a path dep, it must exist before uv sync) ----
 COPY smartdrive_core/ /app/smartdrive_core/
@@ -204,4 +205,4 @@ COPY ${SERVICE_DIR}/ /app/service/
 # RUN uv pip install -e .
 
 EXPOSE 8080
-CMD ["python", "main.py"]
+CMD ["uv", "run", "main.py"]

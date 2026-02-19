@@ -9,11 +9,6 @@ logger = logging.getLogger(__name__)
 
 _client = None
 _collections: dict[str, object] = {}
-# _lock = threading.Lock()
-# import threading
-
-# _client = None
-# _collections: dict[str, object] = {}
 
 _client_lock = threading.Lock()
 _collections_lock = threading.Lock()
