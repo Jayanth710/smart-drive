@@ -1,14 +1,47 @@
+# steps:
+#   # Step 1: Build the Docker image
+#   - name: 'gcr.io/cloud-builders/docker'
+#     # dir: 'smartdrive-media-extractor'
+#     args: ['build', '-t', gcr.io/$PROJECT_ID/smartdrive-media-extractor', '-f', 'smartdrive-media-extractor/Dockerfile', '.']
+
+#   # Step 2: Push the image to Artifact Registry
+#   - name: 'gcr.io/cloud-builders/docker'
+#     args: ['push', 'us-central1-docker.pkg.dev/smartdrive-461502/smartdrive-repo/smartdrive-media-extractor:$SHORT_SHA']
+
+#   # Step 3: Deploy to Cloud Run
+#   - name: 'gcr.io/google.com/cloudsdktool/cloud-sdk'
+#     entrypoint: gcloud
+#     args:
+#       - 'run'
+#       - 'deploy'
+#       - 'smartdrive-media-extractor'
+#       - '--image=us-central1-docker.pkg.dev/smartdrive-461502/smartdrive-repo/smartdrive-media-extractor:$SHORT_SHA'
+#       - '--region=us-central1'
+#       - '--platform=managed'
+#       - '--memory=4Gi'
+#       - '--cpu=2'
+#       - '--timeout=3600'
+#       - '--remove-env-vars=GOOGLE_API_KEY,WEAVIATE_API_KEY,WEAVIATE_URL,GCP_PROJECT_ID,PUBSUB_MEDIA_SUBSCRIPTION_ID'
+#       - '--set-secrets=GOOGLE_API_KEY=GOOGLE_API_KEY:latest,WEAVIATE_API_KEY=WEAVIATE_API_KEY:latest,WEAVIATE_URL=WEAVIATE_URL:latest,GCP_PROJECT_ID=GCP_PROJECT_ID:latest,PUBSUB_MEDIA_SUBSCRIPTION_ID=PUBSUB_MEDIA_SUBSCRIPTION_ID:latest,HF_TOKEN=HF_TOKEN:latest,LLM_MODEL=LLM_MODEL:latest'
+
+# images:
+#   - us-central1-docker.pkg.dev/smartdrive-461502/smartdrive-repo/smartdrive-media-extractor:$SHORT_SHA
+
+# options:
+#   logging: CLOUD_LOGGING_ONLY
+
 steps:
-  # Step 1: Build the Docker image
+  # Step 1: Build the Docker image from the monorepo root
   - name: 'gcr.io/cloud-builders/docker'
-    # dir: 'smartdrive-media-extractor'
-    args: ['build', '-t', 'us-central1-docker.pkg.dev/smartdrive-461502/smartdrive-repo/smartdrive-media-extractor:$SHORT_SHA', '-f', 'smartdrive-media-extractor/Dockerfile', '.']
+    args: 
+      - 'build'
+      - '-t'
+      - 'us-central1-docker.pkg.dev/smartdrive-461502/smartdrive-repo/smartdrive-media-extractor:$SHORT_SHA'
+      - '-f'
+      - 'smartdrive-media-extractor/Dockerfile'
+      - '.' # The root context
 
-  # Step 2: Push the image to Artifact Registry
-  - name: 'gcr.io/cloud-builders/docker'
-    args: ['push', 'us-central1-docker.pkg.dev/smartdrive-461502/smartdrive-repo/smartdrive-media-extractor:$SHORT_SHA']
-
-  # Step 3: Deploy to Cloud Run
+  # Step 2: Deploy to Cloud Run
   - name: 'gcr.io/google.com/cloudsdktool/cloud-sdk'
     entrypoint: gcloud
     args:
@@ -21,11 +54,10 @@ steps:
       - '--memory=4Gi'
       - '--cpu=2'
       - '--timeout=3600'
-      - '--remove-env-vars=GOOGLE_API_KEY,WEAVIATE_API_KEY,WEAVIATE_URL,GCP_PROJECT_ID,PUBSUB_MEDIA_SUBSCRIPTION_ID'
       - '--set-secrets=GOOGLE_API_KEY=GOOGLE_API_KEY:latest,WEAVIATE_API_KEY=WEAVIATE_API_KEY:latest,WEAVIATE_URL=WEAVIATE_URL:latest,GCP_PROJECT_ID=GCP_PROJECT_ID:latest,PUBSUB_MEDIA_SUBSCRIPTION_ID=PUBSUB_MEDIA_SUBSCRIPTION_ID:latest,HF_TOKEN=HF_TOKEN:latest,LLM_MODEL=LLM_MODEL:latest'
 
 images:
-  - us-central1-docker.pkg.dev/smartdrive-461502/smartdrive-repo/smartdrive-media-extractor:$SHORT_SHA
+  - 'us-central1-docker.pkg.dev/smartdrive-461502/smartdrive-repo/smartdrive-media-extractor:$SHORT_SHA'
 
 options:
   logging: CLOUD_LOGGING_ONLY

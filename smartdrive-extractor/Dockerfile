@@ -167,42 +167,90 @@
 
 # syntax=docker/dockerfile:1
 # syntax=docker/dockerfile:1
-FROM python:3.11-slim
+# FROM python:3.11-slim
 
-ENV PYTHONDONTWRITEBYTECODE=1 \
-    PYTHONUNBUFFERED=1 \
-    PORT=8080
+# ENV PYTHONDONTWRITEBYTECODE=1 \
+#     PYTHONUNBUFFERED=1 \
+#     PORT=8080
 
+# WORKDIR /app
+
+# # System deps (common for docling/easyocr/opencv/pdf rendering)
+# RUN apt-get update && apt-get install -y --no-install-recommends \
+#     libgl1 libglib2.0-0 libsm6 libxext6 libxrender1 \
+#     && rm -rf /var/lib/apt/lists/*
+
+# # Install uv + create venv
+# RUN pip install --no-cache-dir uv
+# RUN python -m venv /opt/venv
+# ENV PATH="/opt/venv/bin:$PATH"
+# ENV VIRTUAL_ENV="/opt/venv"
+
+# # ---- copy shared core (if your service depends on it as a path dep, it must exist before uv sync) ----
+# COPY smartdrive_core/ /app/smartdrive_core/
+
+# # ---- copy only lockfiles first for caching ----
+# ARG SERVICE_DIR=smartdrive-extractor
+# COPY ${SERVICE_DIR}/pyproject.toml ${SERVICE_DIR}/uv.lock /app/service/
+
+# WORKDIR /app/service
+
+# # Install deps from lock (no dev deps)
+# RUN uv sync --frozen --no-dev
+
+# # ---- now copy the service code ----
+# COPY ${SERVICE_DIR}/ /app/service/
+
+# # Optional: if you want the service installed as a package (only needed if you use entrypoints/import package)
+# # RUN uv pip install -e .
+
+# EXPOSE 8080
+# CMD ["uv", "run", "main.py"]
+
+# 1. Use the official uv image for the builder stage
+FROM ghcr.io/astral-sh/uv:python3.11-bookworm-slim AS builder
+
+# 2. Set working directory to /app (This is the "Root")
 WORKDIR /app
 
-# System deps (common for docling/easyocr/opencv/pdf rendering)
+# 3. Enable bytecode compilation and copy mode for uv
+ENV UV_COMPILE_BYTECODE=1 \
+    UV_LINK_MODE=copy
+
+# 4. Copy the CORE package first (Crucial for the path in pyproject.toml)
+# We place it at /app/smartdrive_core
+COPY smartdrive_core/ /app/smartdrive_core/
+
+# 5. Copy the SERVICE files
+ARG SERVICE_DIR=smartdrive-extractor
+WORKDIR /app/${SERVICE_DIR}
+
+# 6. Copy only lock/toml first to cache dependencies
+COPY ${SERVICE_DIR}/pyproject.toml ${SERVICE_DIR}/uv.lock ./
+
+# 7. Install dependencies (This uses the relative path ../smartdrive_core)
+RUN uv sync --frozen --no-dev --no-install-project
+
+# 8. Now copy the actual source code
+COPY ${SERVICE_DIR}/ .
+
+# 9. Sync again to install the project itself
+RUN uv sync --frozen --no-dev
+
+# --- Final Runtime Stage ---
+FROM python:3.11-slim-bookworm
+
+WORKDIR /app
+COPY --from=builder /app /app
+
+# Install system dependencies
 RUN apt-get update && apt-get install -y --no-install-recommends \
     libgl1 libglib2.0-0 libsm6 libxext6 libxrender1 \
     && rm -rf /var/lib/apt/lists/*
 
-# Install uv + create venv
-RUN pip install --no-cache-dir uv
-RUN python -m venv /opt/venv
-ENV PATH="/opt/venv/bin:$PATH"
-ENV VIRTUAL_ENV="/opt/venv"
-
-# ---- copy shared core (if your service depends on it as a path dep, it must exist before uv sync) ----
-COPY smartdrive_core/ /app/smartdrive_core/
-
-# ---- copy only lockfiles first for caching ----
-ARG SERVICE_DIR=smartdrive-extractor
-COPY ${SERVICE_DIR}/pyproject.toml ${SERVICE_DIR}/uv.lock /app/service/
-
-WORKDIR /app/service
-
-# Install deps from lock (no dev deps)
-RUN uv sync --frozen --no-dev
-
-# ---- now copy the service code ----
-COPY ${SERVICE_DIR}/ /app/service/
-
-# Optional: if you want the service installed as a package (only needed if you use entrypoints/import package)
-# RUN uv pip install -e .
-
+# Add the venv to the path
+ENV PATH="/app/smartdrive-extractor/.venv/bin:$PATH"
 EXPOSE 8080
-CMD ["uv", "run", "main.py"]
+
+WORKDIR /app/smartdrive-extractor
+CMD ["python", "main.py"]

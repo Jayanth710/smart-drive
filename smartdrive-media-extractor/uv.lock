@@ -854,6 +854,15 @@ wheels = [
 ]
 
 [[package]]
+name = "json-repair"
+version = "0.58.0"
+source = { registry = "https://pypi.org/simple" }
+sdist = { url = "https://files.pythonhosted.org/packages/0c/9b/2a1500e587fd7c33f10dc90d4e26a6ad421bdfbc7ab84c244279b2515e42/json_repair-0.58.0.tar.gz", hash = "sha256:8465fe2f8b7515d1cbf262a2608630e73d9498598bd42330c89f59923c50d0e4", size = 57425, upload-time = "2026-02-17T12:30:29.797Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/1a/35/006b1625a645556f0d18247694c3f278eb122526fca2766ab2e8fba997e7/json_repair-0.58.0-py3-none-any.whl", hash = "sha256:54c31d22a47d5d4a52c4b022604d73f64bc5b01211f3422f0a671b1cc4ccfe3c", size = 40024, upload-time = "2026-02-17T12:30:28.601Z" },
+]
+
+[[package]]
 name = "markupsafe"
 version = "3.0.2"
 source = { registry = "https://pypi.org/simple" }
@@ -1441,6 +1450,7 @@ dependencies = [
     { name = "google-cloud-pubsub" },
     { name = "google-cloud-storage" },
     { name = "google-genai" },
+    { name = "json-repair" },
     { name = "pillow" },
     { name = "python-dotenv" },
     { name = "weaviate-client" },
@@ -1451,9 +1461,10 @@ requires-dist = [
     { name = "google-cloud-pubsub" },
     { name = "google-cloud-storage" },
     { name = "google-genai" },
+    { name = "json-repair" },
     { name = "pillow" },
     { name = "python-dotenv" },
-    { name = "weaviate-client", specifier = ">=4.15.2" },
+    { name = "weaviate-client", specifier = ">=4.15.3" },
 ]
 
 [[package]]
