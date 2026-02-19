@@ -1,5 +1,6 @@
 "use client"
 import apiClient from '@/lib/api';
+import { useRouter } from 'next/navigation';
 import { createContext, useContext, useState, ReactNode, useEffect } from 'react';
 
 interface UserData {
@@ -23,6 +24,7 @@ const AuthContext = createContext<AuthState | undefined>(undefined);
 export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const [token, setToken] = useState<string | null>(null);
   const [data, setData] = useState<UserData | null>(null);
+  const router = useRouter()
 
   const login = async (token: string) => {
     setToken(token);
@@ -33,6 +35,8 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const logout = () => {
     setToken(null);
     localStorage.removeItem('accessToken');
+    router.push("/")
+    return;
   };
 
   const user = async () => {
@@ -55,6 +59,9 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     if (storedToken) {
       setToken(storedToken);
       user()
+    }
+    else{
+      logout()
     }
   }, []);
 

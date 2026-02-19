@@ -1,5 +1,8 @@
 import { useState, useEffect, useCallback } from 'react';
 import apiClient from '@/lib/api';
+import { useAuth } from '@/context/AuthContext';
+import { useRouter } from 'next/navigation';
+import { toast } from 'react-toastify';
 
 type DataItem = {
     filename: string;
@@ -25,14 +28,26 @@ export const useFetchCollections = () => {
     const [documentsData, setDocumentsData] = useState<DataItem[] | null>(null);
     const [imagesData, setImagesData] = useState<DataItem[] | null>(null);
     const [mediaData, setMediaData] = useState<DataItem[] | null>(null);
-
+    const { token } = useAuth();
+    const router = useRouter()
     const [isLoading, setIsLoading] = useState(true);
     const [error, setError] = useState<Error | null>(null);
+
 
     const fetchAll = useCallback(async () => {
         setIsLoading(true);
         setError(null);
         try {
+            if(!token){
+                setCombinedData(null)
+                setDocumentsData(null);
+                setImagesData(null);
+                setMediaData(null);
+                toast.warn("User Logged Out as the session expired. Please login to access your files.")      
+                router.push("/")
+                return;
+            }
+
             const [combinedData, docs, images, media] = await Promise.all([
                 fetchDataItems("all"),
                 fetchDataItems("Documents"),
