@@ -35,3 +35,11 @@ smartdrive-extractor/uploads/
 *.swp
 *~
 .DS_Store
+
+# Python artifacts
+**/*.egg-info/
+**/build/
+**/dist/
+**/__pycache__/
+**/.pytest_cache/
+**/.mypy_cache/

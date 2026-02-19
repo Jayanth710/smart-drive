@@ -5,10 +5,10 @@ dependencies = [
   "google-cloud-pubsub",
   "google-cloud-storage",
   "python-dotenv",
-  "weaviate-client>=4.15.2",
+  "weaviate-client>=4.15.3",
   "google-genai",
-  "google-generativeai>=0.8.6",
-  "pillow"
+  "pillow",
+  "json-repair"
 ]
 
 [build-system]

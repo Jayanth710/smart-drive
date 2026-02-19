@@ -8,7 +8,7 @@ from .document_extractor import extract_content  # your docling-based extractor
 
 logger = logging.getLogger(__name__)
 
-def image_classifier(image_path: str, threshold: float = 450.0) -> str:
+def image_classifier(image_path: str, threshold: float = 850.0) -> str:
     """
     Analyzes an image's "busyness" using Laplacian variance to decide if it's
     better suited for OCR or for captioning. This is a fast, local method.

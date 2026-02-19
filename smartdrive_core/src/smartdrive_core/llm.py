@@ -1,18 +1,17 @@
-import json
+import json, json_repair
 import os
 import re
 from venv import logger
 # from langchain_text_splitters import CharacterTextSplitter
-import google.generativeai as genai
+from google import genai
+from google.genai import types
 from PIL import Image
 from dotenv import load_dotenv
 from .schema import DOC_SUMMARY_SCHEMA
 
 load_dotenv()
 
-genai.configure(api_key=os.getenv("GOOGLE_API_KEY"))
-
-model = genai.GenerativeModel(os.getenv("LLM_MODEL", "gemini-2.5-flash")) 
+client = genai.Client(api_key=os.getenv("GOOGLE_API_KEY", ""))
 
 def LLM_doc_summarizer(text: str):
     """Summarize a file using Gemini model."""
@@ -43,37 +42,53 @@ def LLM_doc_summarizer(text: str):
     """
 
     try:
-        model = genai.GenerativeModel(
-            model_name=os.getenv("LLM_MODEL", "gemini-2.5-flash"),
-            generation_config=genai.GenerationConfig(
+        response = client.models.generate_content(
+            model=os.getenv("LLM_MODEL", "gemini-2.5-flash"),
+            contents=prompt,
+            config=types.GenerateContentConfig(
                 temperature=0.2,
-                max_output_tokens=2048, 
+                max_output_tokens=4096, 
                 response_mime_type="application/json",
                 response_schema=DOC_SUMMARY_SCHEMA, 
             ),
         )
 
-        response = model.generate_content(prompt)
+        # response = model.generate_content(prompt)
         
         # 3. Parse Response
-        data = json.loads(response.text, strict=False)  # strict=False to allow for minor formatting issues
+        # data = json.loads(response.text, strict=False)  # strict=False to allow for minor formatting issues
 
         # user_summary = data["user_summary_markdown"] 
         # index_json = data["index_json"]
+        # overview = data.get("executive_overview", "No overview generated.")
+        # insights = data.get("key_insights", [])
+        
+        # # Assemble with newlines
+        # user_summary = overview + "\n\n"
+        # if insights:
+        #     user_summary += "\n".join([f"- {insight}" for insight in insights])
+            
+        # index_json = data.get("index_json", {})
+
+        # text_to_embed = f"{user_summary}\n\nKeywords: {json.dumps(index_json)}"
+        
+        # # Assuming you have a get_embedding function
+        # embedding = get_embedding(text_to_embed) 
+
+        # return user_summary, index_json, embedding
+
+        if response.parsed:
+            data = response.parsed
+        else:
+            data = json_repair.loads(response.text)
+
         overview = data.get("executive_overview", "No overview generated.")
         insights = data.get("key_insights", [])
-        
-        # Assemble with newlines
-        user_summary = overview + "\n\n"
-        if insights:
-            user_summary += "\n".join([f"- {insight}" for insight in insights])
-            
+        user_summary = f"{overview}\n\n" + "\n".join([f"- {i}" for i in insights])
         index_json = data.get("index_json", {})
 
-        text_to_embed = f"{user_summary}\n\nKeywords: {json.dumps(index_json)}"
-        
-        # Assuming you have a get_embedding function
-        embedding = get_embedding(text_to_embed) 
+        # Generate embedding for the result
+        embedding = get_embedding(f"{user_summary}\n\nKeywords: {json.dumps(index_json)}") 
 
         return user_summary, index_json, embedding
 
@@ -103,7 +118,10 @@ Present the final output as a single, well-structured paragraph and The final ou
 """
 
 
-    response = model.generate_content(prompt)
+    response = client.models.generate_content(
+        model=os.getenv("LLM_MODEL", "gemini-2.5-flash"),
+        contents=prompt
+    )
     embedding = get_embedding(response.text)
     
     return response.text, embedding
@@ -123,7 +141,10 @@ The final output must ONLY be the summary paragraph. Do not include the reconstr
 """
 
 
-    response = model.generate_content(prompt)
+    response = client.models.generate_content(
+        model=os.getenv("LLM_MODEL", "gemini-2.5-flash"),
+        contents=prompt
+    )
     embedding = get_embedding(response.text)
     return response.text, embedding
 
@@ -141,7 +162,10 @@ def LLM_caption_generator(image_path: str):
 Present the final description as a single, well-structured concise paragraph."""
 
     with Image.open(image_path) as img:
-        response = model.generate_content([prompt, img])
+        response = client.models.generate_content(
+            model=os.getenv("LLM_MODEL", "gemini-2.5-flash"),
+            contents=[prompt, img]
+        )
     embedding = get_embedding(response.text)
     
     return response.text, embedding
@@ -149,14 +173,13 @@ Present the final description as a single, well-structured concise paragraph."""
 def get_embedding(text):
     """Generates an embedding for the given text using the Google Generative AI API."""
     try:
-        response = genai.embed_content(
-            # UPDATED: Use the current standard embedding model
-            model="models/gemini-embedding-001", 
-            content=text,
-            task_type="SEMANTIC_SIMILARITY",
-            output_dimensionality=768,
+        result = client.models.embed_content(
+            model="gemini-embedding-001", # Newest standard embedding model
+            contents=text,
+            config=types.EmbedContentConfig(task_type="RETRIEVAL_DOCUMENT"),
+            output_dimensionality=768
         )
-        return response['embedding']
+        return result.embeddings[0].values
     except Exception as e:
         # Log the error properly so you don't crash hard
         print(f"Error generating embedding: {e}")

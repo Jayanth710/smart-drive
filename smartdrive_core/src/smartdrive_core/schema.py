@@ -58,25 +58,51 @@
 #     "required": ["user_summary_markdown", "index_json"]
 # }
 
+# DOC_SUMMARY_SCHEMA = {
+#     "type": "object",
+#     "properties": {
+#         "executive_overview": {
+#             "type": "string",
+#             "description": "A 2-4 sentence executive overview."
+#         },
+#         "key_insights": {
+#             "type": "array",
+#             "items": {"type": "string"},
+#             "description": "3-5 key insights or bullet points."
+#         },
+#         "index_json": {
+#             "type": "object",
+#             "properties": {
+#                 "relevant_dates": {"type": "array", "items": {"type": "string"}},
+#                 "entities": {"type": "array", "items": {"type": "string"}},
+#                 "document_ids": {"type": "array", "items": {"type": "string"}},
+#                 "technical_topics": {"type": "array", "items": {"type": "string"}},
+#             },
+#             "required": ["relevant_dates", "entities", "document_ids", "technical_topics"]
+#         },
+#     },
+#     "required": ["executive_overview", "key_insights", "index_json"]
+# }
+
 DOC_SUMMARY_SCHEMA = {
-    "type": "object",
+    "type": "OBJECT",
     "properties": {
         "executive_overview": {
-            "type": "string",
+            "type": "STRING",
             "description": "A 2-4 sentence executive overview."
         },
         "key_insights": {
-            "type": "array",
-            "items": {"type": "string"},
+            "type": "ARRAY",
+            "items": {"type": "STRING"},
             "description": "3-5 key insights or bullet points."
         },
         "index_json": {
-            "type": "object",
+            "type": "OBJECT",
             "properties": {
-                "relevant_dates": {"type": "array", "items": {"type": "string"}},
-                "entities": {"type": "array", "items": {"type": "string"}},
-                "document_ids": {"type": "array", "items": {"type": "string"}},
-                "technical_topics": {"type": "array", "items": {"type": "string"}},
+                "relevant_dates": {"type": "ARRAY", "items": {"type": "STRING"}},
+                "entities": {"type": "ARRAY", "items": {"type": "STRING"}},
+                "document_ids": {"type": "ARRAY", "items": {"type": "STRING"}},
+                "technical_topics": {"type": "ARRAY", "items": {"type": "STRING"}},
             },
             "required": ["relevant_dates", "entities", "document_ids", "technical_topics"]
         },

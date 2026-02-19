@@ -47,7 +47,7 @@
   "dependencies": {
     "@google-cloud/pubsub": "^5.0.0",
     "@google-cloud/storage": "^7.16.0",
-    "@google/generative-ai": "^0.24.1",
+    "@google/genai": "^1.41.0",
     "@sendgrid/mail": "^8.1.5",
     "axios": "^1.10.0",
     "bcrypt": "^6.0.0",

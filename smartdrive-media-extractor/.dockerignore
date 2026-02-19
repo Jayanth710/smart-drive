@@ -56,3 +56,10 @@ downloads/
 *.wav
 *.zip
 *.pdf
+
+**/*.egg-info
+**/.mypy_cache
+**/dist
+**/build
+.git
+.gitignore

@@ -46,3 +46,10 @@ nltk_data/
 *.png
 *.jpg
 *.jpeg
+
+**/*.egg-info
+**/.mypy_cache
+**/dist
+**/build
+.git
+.gitignore

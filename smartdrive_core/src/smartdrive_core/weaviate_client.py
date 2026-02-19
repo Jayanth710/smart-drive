@@ -4,6 +4,7 @@ import logging
 import threading
 import weaviate
 import weaviate.classes as wvc
+from weaviate.classes.query import Filter
 
 logger = logging.getLogger(__name__)
 
@@ -79,7 +80,7 @@ def ensure_collection(collection_name: str, properties: list[wvc.config.Property
 def check_file_exists(collection_name: str, file_id: str, user_id: str) -> bool:
     try:
         col = _get_collection(collection_name)
-        filters = wvc.Filter.all_of([
+        filters = Filter.all_of([
             wvc.Filter.by_property("file_id").equal(file_id),
             wvc.Filter.by_property("user_id").equal(user_id),
         ])
