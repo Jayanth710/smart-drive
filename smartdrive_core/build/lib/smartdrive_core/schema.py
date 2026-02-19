@@ -61,9 +61,14 @@
 DOC_SUMMARY_SCHEMA = {
     "type": "object",
     "properties": {
-        "user_summary_markdown": {
+        "executive_overview": {
             "type": "string",
-            "description": "A concise Markdown summary. 2–4 sentences of executive overview, followed by 3–5 bullet points.",
+            "description": "A 2-4 sentence executive overview."
+        },
+        "key_insights": {
+            "type": "array",
+            "items": {"type": "string"},
+            "description": "3-5 key insights or bullet points."
         },
         "index_json": {
             "type": "object",
@@ -76,5 +81,5 @@ DOC_SUMMARY_SCHEMA = {
             "required": ["relevant_dates", "entities", "document_ids", "technical_topics"]
         },
     },
-    "required": ["user_summary_markdown", "index_json"]
+    "required": ["executive_overview", "key_insights", "index_json"]
 }

@@ -17,6 +17,11 @@ model = genai.GenerativeModel(os.getenv("LLM_MODEL", "gemini-2.5-flash"))
 def LLM_doc_summarizer(text: str):
     """Summarize a file using Gemini model."""
 
+    if not text or not text.strip():
+        logger.warning("LLM_doc_summarizer received empty text. Skipping API call.")
+        empty_index = {"relevant_dates": [], "entities": [], "document_ids": [], "technical_topics": []}
+        return "No content extracted from document.", empty_index, []
+
     prompt = f"""
     You are an expert Data Analyst.
 
@@ -24,13 +29,9 @@ def LLM_doc_summarizer(text: str):
     Analyze the provided content and extract insights strictly according to the JSON schema.
 
     **Field Guidelines:**
-    1. 'user_summary_markdown': 
-       - Write a 2-4 sentence executive overview.
-       - Follow with a blank line (\\n\\n).
-       - Add 3-5 bullet points of key insights (use "- " for bullets).
-       - CRITICAL: Use literal \\n characters for line breaks.
-    
-    2. 'index_json':
+    1. 'executive_overview': A concise 2-5 sentence summary of the main points.
+    2. 'key_insights': A list of 3-5 bullet points highlighting
+    3. 'index_json':
        - 'relevant_dates': Normalize to YYYY-MM-DD where possible.
        - 'entities': People, Companies, and Key Stakeholders.
        - 'document_ids': Invoice #s, PO #s, or Reference IDs.
@@ -55,10 +56,19 @@ def LLM_doc_summarizer(text: str):
         response = model.generate_content(prompt)
         
         # 3. Parse Response
-        data = json.loads(response.text)
+        data = json.loads(response.text, strict=False)  # strict=False to allow for minor formatting issues
 
-        user_summary = data["user_summary_markdown"] 
-        index_json = data["index_json"]
+        # user_summary = data["user_summary_markdown"] 
+        # index_json = data["index_json"]
+        overview = data.get("executive_overview", "No overview generated.")
+        insights = data.get("key_insights", [])
+        
+        # Assemble with newlines
+        user_summary = overview + "\n\n"
+        if insights:
+            user_summary += "\n".join([f"- {insight}" for insight in insights])
+            
+        index_json = data.get("index_json", {})
 
         text_to_embed = f"{user_summary}\n\nKeywords: {json.dumps(index_json)}"
         
@@ -75,7 +85,7 @@ def LLM_doc_summarizer(text: str):
         print(f"General Error: {e}")
         return "Error generating summary.", {}, []
 
-def LLM_image_summarizer(text: str):
+def LLM_media_summarizer(text: str):
     """Summarize a Image file using Gemini model."""
 
     prompt = f"""The following is a transcript from a dialogue or podcast or from a monologue, speech, or lecture.
@@ -98,7 +108,7 @@ Present the final output as a single, well-structured paragraph and The final ou
     
     return response.text, embedding
 
-def LLM_media_summarizer(text: str):
+def LLM_image_summarizer(text: str):
     """Summarize a Image file using Gemini model."""
 
     prompt = f"""
