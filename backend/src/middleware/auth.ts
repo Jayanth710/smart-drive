@@ -17,7 +17,7 @@ export const verifyToken = async (
       ? req.headers.authorization.split(" ")[1]
       : undefined;
 
-  const cookieToken = (req as any).cookies?.accessToken as string | undefined; // until req.cookies is typed
+  const cookieToken = req.cookies?.accessToken as string | undefined; // until req.cookies is typed
   const token = bearer ?? cookieToken;
 
   if (!token) {
