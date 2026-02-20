@@ -43,6 +43,7 @@ const LogIn: React.FC<LogInProps> = ({ className, setIsLogin, ...props }) => {
         try {
             const response = await apiClient.post(`/api/login`, data)
             if (response.status === 200) {
+                await apiClient.get("/api/user");
                 console.log("Logged in successfully");
                 // const { accessToken } = response.data;
                 // login(accessToken)
