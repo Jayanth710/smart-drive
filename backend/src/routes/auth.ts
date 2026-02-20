@@ -1,5 +1,5 @@
 import express from 'express';
-import { registerUser, loginUser, getUser, updateUser, changePassword, deleteUser, deleteUserData, forgotPassword, resetPassword }  from '../handlers/userHandler.js';
+import { registerUser, loginUser, getUser, updateUser, changePassword, deleteUser, deleteUserData, forgotPassword, resetPassword, logoutUser }  from '../handlers/userHandler.js';
 import { verifyToken } from '../middleware/auth.js';
 
 
@@ -14,5 +14,6 @@ userRouter.delete('/user/delete', verifyToken, deleteUser)
 userRouter.delete('/user/data', verifyToken, deleteUserData)
 userRouter.post('/forgot-password', forgotPassword)
 userRouter.post('/reset-password', resetPassword)
+userRouter.post('/logout', verifyToken, logoutUser)
 
 export default userRouter;

@@ -1,6 +1,7 @@
 import express from "express";
 import dotenv from 'dotenv';
 import cors from "cors";
+import cookieParser from "cookie-parser";
 dotenv.config();
 import uploadRouter from "./routes/upload.js";
 import { setupPubSub } from "./utils/pubsub.js";
@@ -24,8 +25,10 @@ app.use(cors({
 }))
 app.use(express.urlencoded({ extended: true }));
 
+app.use(cookieParser());
 await connectDB()
 await setupPubSub();
+
 
 app.get("/", (req, res) => {
     res.send("SmartDrive backend running 🚀");

@@ -51,10 +51,10 @@ const SideBar = ({ children }: SideBarProps) => {
             icon: (
                 <IconArrowLeft className="h-5 w-5 shrink-0 text-neutral-700 dark:text-neutral-200" />
             ),
-            onClick: () => {
-                logout()
+            onClick: async () => {
+                await logout()
                 toast.success("User Logged Out")
-                router.push("/")
+                // router.push("/")
             }
         },
     ];

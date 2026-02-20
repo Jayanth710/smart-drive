@@ -28,7 +28,7 @@ export const useFetchCollections = () => {
     const [documentsData, setDocumentsData] = useState<DataItem[] | null>(null);
     const [imagesData, setImagesData] = useState<DataItem[] | null>(null);
     const [mediaData, setMediaData] = useState<DataItem[] | null>(null);
-    const { token } = useAuth();
+    const { authReady } = useAuth();
     const router = useRouter()
     const [isLoading, setIsLoading] = useState(true);
     const [error, setError] = useState<Error | null>(null);
@@ -38,15 +38,6 @@ export const useFetchCollections = () => {
         setIsLoading(true);
         setError(null);
         try {
-            if(!token){
-                setCombinedData(null)
-                setDocumentsData(null);
-                setImagesData(null);
-                setMediaData(null);
-                toast.warn("User Logged Out as the session expired. Please login to access your files.")      
-                router.push("/")
-                return;
-            }
 
             const [combinedData, docs, images, media] = await Promise.all([
                 fetchDataItems("all"),
@@ -65,11 +56,12 @@ export const useFetchCollections = () => {
         } finally {
             setIsLoading(false);
         }
-    }, []);
+    }, [router]);
 
     useEffect(() => {
+        if (!authReady) return;
         fetchAll();
-    }, [fetchAll]);
+    }, [fetchAll, authReady]);
 
     const projects = {
         documents: {

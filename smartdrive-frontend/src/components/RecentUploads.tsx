@@ -2,6 +2,8 @@
 import React from 'react';
 import { FileCard } from './FileCard';
 import { useFetchCollections } from '@/lib/fetchCollections';
+import { useAuth } from '@/context/AuthContext';
+import { FileListWithDrawer } from './FileListWithDrawer';
 
 export type UploadItem = {
   filename: string;
@@ -18,6 +20,7 @@ type RecentUploadsProps = {
 const RecentUploads = ({ type = "all" }: RecentUploadsProps) => {
   // const [uploads, setUploads] = useState<UploadItem[]>([]);
   const { documentsData, imagesData, mediaData, refreshData, combinedData } = useFetchCollections()
+  const { authReady, data, logout } = useAuth();
 
   let collectionDataToDisplay: UploadItem[] | null;
 
@@ -38,6 +41,8 @@ const RecentUploads = ({ type = "all" }: RecentUploadsProps) => {
   }
 
   const handleAction = () => {
+    if (!authReady || !data) return;         // auth still loading or not authenticated, do nothing
+
     if (refreshData) {
       refreshData();
     }
@@ -49,7 +54,8 @@ const RecentUploads = ({ type = "all" }: RecentUploadsProps) => {
       {collectionDataToDisplay?.length === 0 ? (
         <p className="text-gray-500">No uploads yet.</p>
       ) : (
-        collectionDataToDisplay?.map((file) => <FileCard key={file.file_id} file={file} onAction={handleAction} />)
+        <FileListWithDrawer files={collectionDataToDisplay || []} onRefresh={handleAction} />
+        // collectionDataToDisplay?.map((file) => <FileCard key={file.file_id} file={file} onAction={handleAction} />)
       )}
     </div>
   );

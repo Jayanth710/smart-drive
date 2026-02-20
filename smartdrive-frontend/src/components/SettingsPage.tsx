@@ -69,7 +69,7 @@ const SettingsPage = () => {
             if (res.status === 200) {
                 toast.success('Account Deleted')
             }
-            router.push("/");
+            await logout();
         } catch (err) {
             console.error("Account deletion failed", err);
             toast.error("Account deletion failed")
@@ -96,9 +96,8 @@ const SettingsPage = () => {
     }
 
     const handleLogout = async () => {
-        logout()
+        await logout()
         toast.success('User Logged Out.')
-        router.push("/")
     }
 
 

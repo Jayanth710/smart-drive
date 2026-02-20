@@ -1,18 +1,22 @@
-
 "use client";
 import RecentUploads, { UploadItem } from "@/components/RecentUploads";
 import SearchBar from "@/components/Search";
 import { HoverEffect } from "@/components/ui/card-hover-effect";
 import React, { useState } from "react";
-import { FileCard } from "@/components/FileCard";
+// import { FileCard } from "@/components/FileCard";
 import { useFetchCollections } from "@/lib/fetchCollections";
+import { useAuth } from "@/context/AuthContext";
+import { FileListWithDrawer } from "@/components/FileListWithDrawer";
 
 const Home = () => {
-    const { projects, error, refreshData } = useFetchCollections ();
+    const { projects, error, refreshData } = useFetchCollections();
+    const {authReady, data} = useAuth();
     const [searchResults, setSearchResults] = useState<UploadItem[]>([]);
-    const handleAction = () => {
+    const handleAction = async () => {
+        if (!authReady || !data) return; // auth still loading or not authenticated, do nothing
+        
         refreshData();
-    }
+    };
 
     if (error) {
         return (
@@ -31,9 +35,10 @@ const Home = () => {
             {searchResults.length > 0 ? (
                 <div className="w-full max-w-5xl mt-4">
                     <h3 className="text-lg font-semibold mb-2">Results:</h3>
-                    {searchResults.map((file) => (
+                    <FileListWithDrawer files={searchResults} onRefresh={handleAction} />
+                    {/* {searchResults.map((file) => (
                         <FileCard key={file.file_id} file={file} onAction={handleAction} />
-                    ))}
+                    ))} */}
                 </div>
             ) : (
                 <div className="mt-2 flex-1">

@@ -46,12 +46,22 @@ const loginUser = async (req: Request, res: Response) => {
         const accessToken = generateAccessToken(user._id.toString());
         const refreshToken = await generaterefreshToken(user._id.toString());
 
-        res.cookie('refreshToken', refreshToken, {
+        res.cookie("accessToken", accessToken, {
             httpOnly: true,
-            secure: process.env.NODE_ENV !== 'development',
-            sameSite: 'strict',
+            secure: process.env.NODE_ENV !== "development",
+            sameSite: process.env.NODE_ENV === "development" ? "lax" : "none", // IMPORTANT for Vercel ↔ backend domain
             maxAge: 24 * 60 * 60 * 1000,
+            path: "/",
         });
+
+        res.cookie("refreshToken", refreshToken, {
+            httpOnly: true,
+            secure: process.env.NODE_ENV !== "development",
+            sameSite: process.env.NODE_ENV === "development" ? "lax" : "none",
+            maxAge: 24 * 60 * 60 * 1000,
+            path: "/",
+        });
+
 
         logger.info(`User logged in successfully: ${email}`);
 
@@ -344,6 +354,31 @@ const resetPassword = async (req: Request, res: Response): Promise<void> => {
     }
 }
 
+const logoutUser = async (req: AuthenticatedRequest, res: Response): Promise<void> => {
+    try {
+        res.clearCookie("accessToken", {
+            httpOnly: true,
+            secure: process.env.NODE_ENV !== "development",
+            sameSite: process.env.NODE_ENV === "development" ? "lax" : "none",
+            path: "/",
+        });
+
+        res.clearCookie("refreshToken", {
+            httpOnly: true,
+            secure: process.env.NODE_ENV !== "development",
+            sameSite: process.env.NODE_ENV === "development" ? "lax" : "none",
+            path: "/",
+        });
+
+        res.status(200).json({ message: 'Logged out successfully' });
+        return
+    } catch (error) {
+        console.error('Logout Error:', error);
+        res.status(500).json({ message: 'An internal server error occurred.' });
+        return
+    }
+}
+
 export {
     loginUser,
     registerUser,
@@ -353,5 +388,6 @@ export {
     deleteUser,
     deleteUserData,
     forgotPassword,
-    resetPassword
+    resetPassword,
+    logoutUser
 }

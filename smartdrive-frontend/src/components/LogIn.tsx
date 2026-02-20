@@ -18,7 +18,7 @@ type LogInProps = {
 }
 
 const LogIn: React.FC<LogInProps> = ({ className, setIsLogin, ...props }) => {
-    const { login } = useAuth()
+    // const { login } = useAuth()
     const [data, setData] = useState({
         email: "",
         password: ""
@@ -45,8 +45,8 @@ const LogIn: React.FC<LogInProps> = ({ className, setIsLogin, ...props }) => {
             const response = await apiClient.post(`/api/login`, data)
             if (response.status === 200) {
                 console.log("Logged in successfully");
-                const { accessToken } = response.data;
-                login(accessToken)
+                // const { accessToken } = response.data;
+                // login(accessToken)
                 toast.success("User succesfully Logged In.")
                 router.push("/dashboard")
             }

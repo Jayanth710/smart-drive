@@ -1,8 +1,10 @@
 "use client"
-import { FileCard } from '@/components/FileCard'
+// import { FileCard } from '@/components/FileCard'
+import { FileListWithDrawer } from '@/components/FileListWithDrawer'
 import RecentUploads, { UploadItem } from '@/components/RecentUploads'
 import SearchBar from '@/components/Search'
 import { HoverEffect } from '@/components/ui/card-hover-effect'
+import { useAuth } from '@/context/AuthContext'
 import { useFetchCollections } from '@/lib/fetchCollections'
 import React, { useState } from 'react'
 
@@ -10,8 +12,11 @@ const MediaPage = () => {
 
     const { projects, error, refreshData } = useFetchCollections();
     const [searchResults, setSearchResults] = useState<UploadItem[]>([]);
+    const {authReady, data} = useAuth();
 
-    const handleAction = () => {
+    const handleAction = async () => {
+        if (!authReady || !data) return;         // auth still loading or not authenticated, do nothing
+
         refreshData();
     }
 
@@ -32,9 +37,10 @@ const MediaPage = () => {
             {searchResults.length > 0 ? (
                 <div className="w-full max-w-5xl mt-4">
                     <h3 className="text-lg font-semibold mb-2">Results:</h3>
-                    {searchResults.map((file) => (
+                    <FileListWithDrawer files={searchResults} onRefresh={handleAction} />
+                    {/* {searchResults.map((file) => (
                         <FileCard key={file.file_id} file={file} onAction={handleAction} />
-                    ))}
+                    ))} */}
                 </div>
             ) : (
                 <div className="mt-2 flex-1">
