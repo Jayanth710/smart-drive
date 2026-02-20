@@ -11,7 +11,6 @@ import {
 import { motion } from "motion/react";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/context/AuthContext";
-import { useRouter } from "next/navigation";
 import { toast } from "react-toastify";
 
 
@@ -22,7 +21,6 @@ interface SideBarProps {
 
 const SideBar = ({ children }: SideBarProps) => {
     const { data, logout } = useAuth()
-    const router = useRouter()
     const links = [
         {
             label: "Dashboard",

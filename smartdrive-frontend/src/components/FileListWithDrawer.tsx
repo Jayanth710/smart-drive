@@ -5,6 +5,7 @@ import { motion } from "motion/react";
 import apiClient from "@/lib/api";
 import { toast } from "react-toastify";
 import type { AxiosError } from "axios";
+import Image from "next/image";
 
 import {
     IconChevronRight,
@@ -91,7 +92,7 @@ function isPdf(filetype: string) {
     return (filetype || "").toLowerCase().includes("pdf");
 }
 function getStatus(err: unknown) {
-    const e = err as AxiosError<any>;
+    const e = err as AxiosError<unknown>;
     return e?.response?.status;
 }
 
@@ -192,7 +193,7 @@ export function FileListWithDrawer({
             setPreviewLoading(true);
 
             try {
-                const res = await apiClient.get(`/file/${selectedFile.file_id}/url?action=view`);
+                const res = await apiClient.get(`/file/${selectedFile?.file_id}/url?action=view`);
                 setPreviewUrl(res.data.url);
             } catch (err) {
                 console.error(err);
@@ -202,7 +203,7 @@ export function FileListWithDrawer({
         };
 
         run();
-    }, [drawerOpen, selectedFile?.file_id]);
+    }, [drawerOpen, selectedFile]);
 
     return (
         <div className="w-full">
@@ -412,7 +413,11 @@ export function FileListWithDrawer({
                                             ) : !previewUrl ? (
                                                 <div className="text-sm text-muted-foreground">No preview available.</div>
                                             ) : isImage(selectedFile.filetype) ? (
-                                                <img src={previewUrl} alt={selectedFile.filename} className="block w-full rounded-md border" />
+                                                <Image 
+                                                    src={previewUrl} 
+                                                    alt={selectedFile.filename} 
+                                                    className="block w-full rounded-md border" 
+                                                />
                                             ) : isPdf(selectedFile.filetype) ? (
                                                 <iframe src={previewUrl} className="w-full h-[520px] rounded-md border" title="PDF Preview" />
                                             ) : (

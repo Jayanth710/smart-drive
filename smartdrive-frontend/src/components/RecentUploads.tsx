@@ -1,6 +1,6 @@
 "use client"
 import React from 'react';
-import { FileCard } from './FileCard';
+// import { FileCard } from './FileCard';
 import { useFetchCollections } from '@/lib/fetchCollections';
 import { useAuth } from '@/context/AuthContext';
 import { FileListWithDrawer } from './FileListWithDrawer';
@@ -20,7 +20,7 @@ type RecentUploadsProps = {
 const RecentUploads = ({ type = "all" }: RecentUploadsProps) => {
   // const [uploads, setUploads] = useState<UploadItem[]>([]);
   const { documentsData, imagesData, mediaData, refreshData, combinedData } = useFetchCollections()
-  const { authReady, data, logout } = useAuth();
+  const { authReady, data } = useAuth();
 
   let collectionDataToDisplay: UploadItem[] | null;
 

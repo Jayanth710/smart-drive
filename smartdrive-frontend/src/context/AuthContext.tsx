@@ -196,7 +196,7 @@
 
 import apiClient from "@/lib/api";
 import { usePathname, useRouter } from "next/navigation";
-import React, { createContext, useContext, useEffect, useRef, useState } from "react";
+import React, { createContext, useContext, useEffect, useState } from "react";
 
 interface UserData {
   id: string;
