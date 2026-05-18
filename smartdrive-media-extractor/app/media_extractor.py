@@ -63,8 +63,8 @@ def media_extractor(media_path: str, data: dict):
             }
         
     except Exception as e:
-        logger.error("Error occurred during file extraction. {e}", exc_info=True)
+        logger.error(f"Error occurred during file extraction: {e}", exc_info=True)
         return {
-            "message": f"Error occurred during file extraction. {e}",
+            "message": f"Error occurred during file extraction: {e}",
             "created": False
         }

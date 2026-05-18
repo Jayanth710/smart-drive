@@ -128,13 +128,16 @@ const deleteFile = async (req: AuthenticatedRequest, res: Response) => {
             return
         }
 
-        const [gcsSuccess, weaviateSuccess] = await Promise.all([
-            file.delete(),
+        const [gcsResult, weaviateSuccess] = await Promise.all([
+            file.delete().then(() => true).catch((err: unknown) => {
+                logger.error(`GCS delete failed for fileId ${fileId}:`, err);
+                return false;
+            }),
             deleteWeaviateFile(userId!, fileRecord?._id.toString(), targetCollection)
         ]);
 
-        if (!gcsSuccess || !weaviateSuccess) {
-            throw new Error(`Failed to delete file assets for fileId: ${fileId}`);
+        if (!gcsResult || !weaviateSuccess) {
+            throw new Error(`Failed to delete file assets for fileId: ${fileId} (gcs=${gcsResult}, weaviate=${weaviateSuccess})`);
         }
         await UserFile.findByIdAndDelete(fileId)
 
@@ -142,11 +145,9 @@ const deleteFile = async (req: AuthenticatedRequest, res: Response) => {
         res.status(200).send({ message: `Successfully deleted ${fileRecord?.fileName}` })
         return
     } catch (error: unknown) {
-        if (error) {
-            logger.warn(`File not found, nothing to delete.`);
-            res.status(500).json({ error: 'Deletion failed due to an internal error.' });
-            return
-        }
+        logger.error(`Deletion failed for fileId ${fileId}:`, error);
+        res.status(500).json({ error: 'Deletion failed due to an internal error.' });
+        return
     }
 }
 

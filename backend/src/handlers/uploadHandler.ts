@@ -46,17 +46,43 @@ const handleFileUpload = async (req: AuthenticatedRequest, res: Response): Promi
 
     const uploadRes = await uploadFileToGCS(file, userId!, req.body.fileHash!);
 
-    const savedFile = await UserFile.create({
-      userId,
-      fileName,
-      gcsUrl: uploadRes.gcsUrl,
-      fileType: file.mimetype,
-      fileHash: fileHash,
-    });
+    let savedFile;
+    try {
+      savedFile = await UserFile.create({
+        userId,
+        fileName,
+        gcsUrl: uploadRes.gcsUrl,
+        fileType: file.mimetype,
+        fileHash: fileHash,
+      });
+    } catch (err: unknown) {
+      // E11000 = duplicate key. The unique index on (userId, fileHash)
+      // catches the race where two concurrent uploads passed the findOne check.
+      if (err && typeof err === 'object' && (err as { code?: number }).code === 11000) {
+        logger.info(`Race detected: file ${fileName} for user ${userId} was created concurrently`);
+        const existing = await UserFile.findOne({ userId, fileHash });
+        res.status(409).json({
+          message: "File already exists for this user",
+          gcsUrl: existing?.gcsUrl,
+        });
+        return;
+      }
+      throw err;
+    }
 
     logger.info(`File ${fileName} uploaded successfully for user ${userId}`);
 
-    await publishFileMetadata(savedFile)
+    try {
+      await publishFileMetadata(savedFile);
+    } catch (pubsubErr) {
+      logger.error(`Pub/Sub publish failed for fileId ${savedFile._id}; file is uploaded but will not be extracted:`, pubsubErr);
+      res.status(502).json({
+        message: "File uploaded but indexing queue failed. Please retry.",
+        gcsUrl: savedFile.gcsUrl,
+        fileName: savedFile.fileName,
+      });
+      return;
+    }
 
     res.status(200).json({
       message: "File uploaded successfully",
@@ -85,7 +111,7 @@ const getUploads = async (req: AuthenticatedRequest, res: Response): Promise<voi
     logger.info("Fetching...")
 
     const results = await getRecentUploads(userId!, queryCollection!)
-    res.status(200).send({ message: "Fetching Siccessful", data: results });
+    res.status(200).send({ message: "Fetching Successful", data: results });
     return
   } catch (error: unknown) {
     res.status(500).send(`Internal Server Error ${error}`);

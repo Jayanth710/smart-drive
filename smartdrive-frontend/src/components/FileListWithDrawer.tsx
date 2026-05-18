@@ -414,6 +414,8 @@ export function FileListWithDrawer({
                                                 <div className="text-sm text-muted-foreground">No preview available.</div>
                                             ) : isImage(selectedFile.filetype) ? (
                                                 <Image 
+                                                    width={500}
+                                                    height={500}
                                                     src={previewUrl} 
                                                     alt={selectedFile.filename} 
                                                     className="block w-full rounded-md border" 

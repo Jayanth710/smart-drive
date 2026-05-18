@@ -34,7 +34,6 @@ const userFileSchema = new mongoose.Schema(
         fileHash: {
             type: String,
             required: true,
-            index: true,
         }
     },
     {
@@ -42,6 +41,7 @@ const userFileSchema = new mongoose.Schema(
     }
 );
 
+userFileSchema.index({ userId: 1, fileHash: 1 }, { unique: true });
 userFileSchema.index({ userId: 1, fileName: 1 }, { unique: true });
 
 const UserFile = mongoose.model("UserFile", userFileSchema);

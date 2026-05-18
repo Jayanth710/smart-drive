@@ -5,16 +5,13 @@ import { HoverEffect } from "@/components/ui/card-hover-effect";
 import React, { useState } from "react";
 // import { FileCard } from "@/components/FileCard";
 import { useFetchCollections } from "@/lib/fetchCollections";
-import { useAuth } from "@/context/AuthContext";
 import { FileListWithDrawer } from "@/components/FileListWithDrawer";
 
 const Home = () => {
     const { projects, error, refreshData } = useFetchCollections();
-    const {authReady, data} = useAuth();
     const [searchResults, setSearchResults] = useState<UploadItem[]>([]);
-    const handleAction = async () => {
-        if (!authReady || !data) return; // auth still loading or not authenticated, do nothing
-        
+
+    const handleAction = async () => {       // auth still loading or not authenticated, do nothing
         refreshData();
     };
 
