@@ -78,7 +78,7 @@ const expandQueries = async (q: string): Promise<{ all: string[]; hyde: string }
 Query: "${q}"`,
             VARIATIONS_SCHEMA, 512, "ephemeral:multi-query",
         );
-        const variations = (out?.variations ?? []).filter((v): v is string => typeof v === "string" && v.trim()).slice(0, 2);
+        const variations = (out?.variations ?? []).filter((v): v is string => typeof v === "string" && v.trim().length > 0).slice(0, 2);
         return { all: [q, ...variations].filter(Boolean), hyde: (out?.hyde ?? "").trim() };
     } catch (e) {
         logger.warn(`ephemeral expandQueries failed: ${e}`);

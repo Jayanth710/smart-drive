@@ -68,7 +68,11 @@ const ensureNewProperties = async (
         const col = client.collections.get(name);
         const cfg = await col.config.get();
         const existing = new Set((cfg.properties ?? []).map((p) => p.name));
-        const wantedAdds: { name: string; dataType: string; opts?: Record<string, unknown> }[] = [
+        const wantedAdds: {
+            name: string;
+            dataType: typeof dataType.TEXT | typeof dataType.INT | typeof dataType.BOOLEAN;
+            opts?: Record<string, unknown>;
+        }[] = [
             { name: "parent_text", dataType: dataType.TEXT, opts: { indexSearchable: false } },
             { name: "parent_index", dataType: dataType.INT },
             { name: "has_table", dataType: dataType.BOOLEAN, opts: { indexFilterable: true } },
