@@ -11,6 +11,9 @@ export interface UserFileType extends mongoose.Document {
     fileHash: string;
     extractionStatus: ExtractionStatus;
     extractionError?: string | null;
+    /** True once per-chunk vectors have been computed and stored in Weaviate.
+     *  Lazy: only flipped when a user starts a chat with the file. */
+    chatReady?: boolean;
     createdAt: Date;
     updatedAt: Date;
 }
@@ -47,6 +50,10 @@ const userFileSchema = new mongoose.Schema(
         },
         extractionError: {
             type: String,
+        },
+        chatReady: {
+            type: Boolean,
+            default: false,
         },
     },
     {

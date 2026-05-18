@@ -50,6 +50,7 @@ import {
     DropdownMenuTrigger,
     DropdownMenuSeparator,
 } from "./ui/dropdown-menu";
+import { FileChat } from "./FileChat";
 
 export type ExtractionStatus = 'pending' | 'processing' | 'done' | 'failed';
 
@@ -76,6 +77,17 @@ export interface UploadItem {
     extraction_status?: ExtractionStatus;
     extraction_error?: string;
     index_json?: IndexJson;
+
+    /** Set by the search endpoint: the chunk text that scored highest against
+     *  the user's query. Surfaced on the card so users know *why* a file matched. */
+    matched_chunk?: string;
+    /** Hybrid-search score from Weaviate. Present on search results only. */
+    score?: number;
+    /** High-precision filter hits: entities/dates/doc_ids the user query mentioned
+     *  that this file also contains. Empty/undefined for pure semantic hits. */
+    matched_entities?: string[];
+    matched_dates?: string[];
+    matched_doc_ids?: string[];
 }
 
 type Action = "view" | "download" | "delete" | "extract" | null;
@@ -572,6 +584,44 @@ function FileCard({
                         </div>
                     )}
 
+                    {/* High-precision filter hits — entities/dates/IDs from the user's query
+                        that this file actually contains. Strongest signal of "this is the file you meant." */}
+                    {(file.matched_entities?.length || file.matched_dates?.length || file.matched_doc_ids?.length) && (
+                        <div className="flex flex-wrap gap-1.5 items-center">
+                            <span className="text-[10px] uppercase tracking-wider text-muted-foreground">
+                                Matches:
+                            </span>
+                            {file.matched_entities?.map((e) => (
+                                <span key={`me-${e}`} className="text-[11px] px-1.5 py-0.5 rounded-md bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 font-medium">
+                                    {e}
+                                </span>
+                            ))}
+                            {file.matched_dates?.map((d) => (
+                                <span key={`md-${d}`} className="text-[11px] px-1.5 py-0.5 rounded-md bg-amber-500/15 text-amber-700 dark:text-amber-300 font-medium">
+                                    {d}
+                                </span>
+                            ))}
+                            {file.matched_doc_ids?.map((d) => (
+                                <span key={`mi-${d}`} className="text-[11px] px-1.5 py-0.5 rounded-md bg-sky-500/15 text-sky-700 dark:text-sky-300 font-medium">
+                                    #{d}
+                                </span>
+                            ))}
+                        </div>
+                    )}
+
+                    {/* Matched chunk — only present on search results. Shows the actual
+                        snippet that scored highest so users know *why* this file matched. */}
+                    {file.matched_chunk && (
+                        <div className="rounded-md border-l-2 border-violet-500/60 bg-violet-500/[0.04] px-3 py-2">
+                            <div className="text-[10px] uppercase tracking-wider text-muted-foreground mb-1 flex items-center gap-1">
+                                <IconSearch size={10} /> Matched in this file
+                            </div>
+                            <div className="text-xs italic text-foreground/80 line-clamp-3 leading-relaxed">
+                                &ldquo;{file.matched_chunk}&rdquo;
+                            </div>
+                        </div>
+                    )}
+
                     {/* Entity chips from index_json — the "AI understood this file" moment */}
                     {entities.length > 0 && (
                         <div className="flex flex-wrap gap-1.5">
@@ -686,6 +736,14 @@ export function FileListWithDrawer({
 
     const [previewUrl, setPreviewUrl] = useState<string | null>(null);
     const [previewLoading, setPreviewLoading] = useState(false);
+    const [previewText, setPreviewText] = useState<string | null>(null);
+    const [previewTextLoading, setPreviewTextLoading] = useState(false);
+    const [previewTextTruncated, setPreviewTextTruncated] = useState(false);
+
+    // Which drawer tab is active. We control this so the "Chat with this file"
+    // action button can jump to the Chat tab. Resets when the file changes.
+    const [drawerTab, setDrawerTab] = useState<"preview" | "summary" | "entities" | "chat">("summary");
+    useEffect(() => { setDrawerTab("summary"); }, [selectedId]);
 
     // List controls
     const [filter, setFilter] = useState<FilterKind>("all");
@@ -877,6 +935,8 @@ export function FileListWithDrawer({
 
             setPreviewUrl(null);
             setPreviewLoading(true);
+            setPreviewText(null);
+            setPreviewTextTruncated(false);
 
             try {
                 const res = await apiClient.get(`/file/${selectedFile?.file_id}/url?action=view`);
@@ -890,6 +950,31 @@ export function FileListWithDrawer({
 
         run();
     }, [drawerOpen, selectedFile]);
+
+    // Lazy extracted-text fallback for non-image/non-pdf previews (docx, txt, etc.).
+    useEffect(() => {
+        const run = async () => {
+            if (!drawerOpen || !selectedFile) return;
+            if (drawerTab !== "preview") return;
+            const ft = (selectedFile.filetype || "").toLowerCase();
+            const needsTextFallback = !ft.includes("image") && !ft.includes("pdf");
+            if (!needsTextFallback) return;
+            if (previewText !== null || previewTextLoading) return;
+            if ((selectedFile.extraction_status ?? "done") !== "done") return;
+
+            setPreviewTextLoading(true);
+            try {
+                const res = await apiClient.get(`/file/${selectedFile.file_id}/text`);
+                setPreviewText(typeof res.data?.text === "string" ? res.data.text : "");
+                setPreviewTextTruncated(!!res.data?.truncated);
+            } catch {
+                setPreviewText("");
+            } finally {
+                setPreviewTextLoading(false);
+            }
+        };
+        run();
+    }, [drawerOpen, drawerTab, selectedFile, previewText, previewTextLoading]);
 
     const visibleFilters = hideTypeFilter
         ? FILTERS.filter((f) => f.value === "all" || f.value === "failed")
@@ -1153,7 +1238,18 @@ export function FileListWithDrawer({
             <Sheet open={drawerOpen} onOpenChange={setDrawerOpen}>
                 <SheetContent side="right" className="w-full sm:max-w-xl">
                     <SheetHeader>
-                        <SheetTitle className="truncate">{selectedFile?.filename ?? "File"}</SheetTitle>
+                        <SheetTitle className="truncate">
+                            {selectedFile ? (
+                                <button
+                                    onClick={() => { setDrawerTab("preview"); if (selectedFile) handleView(selectedFile); }}
+                                    title="Open file in a new tab"
+                                    className="hover:underline underline-offset-2 inline-flex items-center gap-1.5"
+                                >
+                                    {selectedFile.filename}
+                                    <IconEye size={14} className="opacity-60" />
+                                </button>
+                            ) : "File"}
+                        </SheetTitle>
                         <SheetDescription className="flex items-center gap-2">
                             <Badge variant="secondary">
                                 {selectedFile ? fileTypeLabel(selectedFile.filetype) : "—"}
@@ -1185,11 +1281,28 @@ export function FileListWithDrawer({
                                 </Button>
                             </div>
 
-                            <Tabs defaultValue="summary" className="mt-4 mb-2">
+                            {/* Smart actions row — clicking "Chat with this file" jumps
+                                straight to the Chat tab below. */}
+                            <div className="mt-4 rounded-lg border p-3">
+                                <div className="flex items-center justify-between gap-2">
+                                    <div className="text-xs text-muted-foreground">Smart actions</div>
+                                    <Button
+                                        size="sm"
+                                        variant="secondary"
+                                        onClick={() => setDrawerTab("chat")}
+                                    >
+                                        <IconSparkles size={14} className="mr-1.5" />
+                                        Chat with this file
+                                    </Button>
+                                </div>
+                            </div>
+
+                            <Tabs value={drawerTab} onValueChange={(v) => setDrawerTab(v as typeof drawerTab)} className="mt-4 mb-2">
                                 <TabsList>
                                     <TabsTrigger value="preview">Preview</TabsTrigger>
                                     <TabsTrigger value="summary">Summary</TabsTrigger>
                                     <TabsTrigger value="entities">Entities</TabsTrigger>
+                                    <TabsTrigger value="chat">Chat</TabsTrigger>
                                 </TabsList>
 
                                 <TabsContent value="preview" className="mt-2">
@@ -1209,6 +1322,17 @@ export function FileListWithDrawer({
                                                 />
                                             ) : isPdf(selectedFile.filetype) ? (
                                                 <iframe src={previewUrl} className="w-full h-[520px] rounded-md border" title="PDF Preview" />
+                                            ) : previewTextLoading ? (
+                                                <div className="text-sm text-muted-foreground">Loading extracted text…</div>
+                                            ) : previewText && previewText.trim().length > 0 ? (
+                                                <div>
+                                                    <div className="text-[11px] uppercase tracking-wider text-muted-foreground mb-1.5">
+                                                        Extracted text {previewTextTruncated ? "(truncated)" : ""}
+                                                    </div>
+                                                    <pre className="text-xs whitespace-pre-wrap font-mono leading-relaxed bg-muted/30 p-3 rounded-md border max-h-[60vh] overflow-auto">
+                                                        {previewText}
+                                                    </pre>
+                                                </div>
                                             ) : (
                                                 <div className="text-sm text-muted-foreground">Preview not supported. Use “View”.</div>
                                             )}
@@ -1257,6 +1381,14 @@ export function FileListWithDrawer({
 
                                 <TabsContent value="entities" className="mt-2">
                                     <EntityPanel idx={selectedFile.index_json} />
+                                </TabsContent>
+
+                                <TabsContent value="chat" className="mt-2">
+                                    <FileChat
+                                        fileId={selectedFile.file_id}
+                                        fileName={selectedFile.filename}
+                                        ready={(selectedFile.extraction_status ?? "done") === "done"}
+                                    />
                                 </TabsContent>
                             </Tabs>
                         </div>

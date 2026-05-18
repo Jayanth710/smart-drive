@@ -1,65 +1,176 @@
+"""Weaviate schema + save helpers for the document/image extractor.
+
+Two collections per content type:
+  - <Doc/Image/Media>: one row per file with summary + raw_text + index_json
+    (used for the file list, drawer summary, entity panel)
+  - <Doc/Image/Media>Chunks: one row per chunk with chunk_text + chunk_index
+    (used for semantic search; we de-dup to parent file_id at query time)
+"""
+
 import json
-from smartdrive_core import weaviate_client as ws
 import weaviate.classes as wvc
+from smartdrive_core import weaviate_client as ws
 
+
+def _norm_list(values) -> list[str]:
+    """Normalise an index_json array into lowercase trimmed unique strings.
+
+    Lowercasing matters for filter matching — Weaviate `contains_any` is
+    case-sensitive, and we extract entities from user queries lowercased.
+    """
+    if not isinstance(values, list):
+        return []
+    seen = set()
+    out: list[str] = []
+    for v in values:
+        if not isinstance(v, str):
+            continue
+        normalized = v.strip().lower()
+        if not normalized or normalized in seen:
+            continue
+        seen.add(normalized)
+        out.append(normalized)
+    return out
+
+# ---- collection names ----
 DOC_COLLECTION = "SmartDriveDocuments"
-
-DOC_PROPERTIES = [
-  wvc.config.Property(name="file_id", data_type=wvc.config.DataType.TEXT),
-  wvc.config.Property(name="user_id", data_type=wvc.config.DataType.TEXT),
-  wvc.config.Property(name="summary", data_type=wvc.config.DataType.TEXT),
-  wvc.config.Property(name="filename", data_type=wvc.config.DataType.TEXT),
-  wvc.config.Property(name="filetype", data_type=wvc.config.DataType.TEXT),
-  wvc.config.Property(name="created_at", data_type=wvc.config.DataType.DATE, index_filterable=True),
-  wvc.config.Property(name="index_json", data_type=wvc.config.DataType.TEXT),
-]
+DOC_CHUNK_COLLECTION = "SmartDriveDocumentChunks"
 
 IMG_COLLECTION = "SmartDriveImages"
+IMG_CHUNK_COLLECTION = "SmartDriveImageChunks"
+
+# ---- schemas ----
+DOC_PROPERTIES = [
+    wvc.config.Property(name="file_id", data_type=wvc.config.DataType.TEXT),
+    wvc.config.Property(name="user_id", data_type=wvc.config.DataType.TEXT),
+    wvc.config.Property(name="summary", data_type=wvc.config.DataType.TEXT),
+    wvc.config.Property(name="raw_text", data_type=wvc.config.DataType.TEXT, index_searchable=False),
+    wvc.config.Property(name="filename", data_type=wvc.config.DataType.TEXT),
+    wvc.config.Property(name="filetype", data_type=wvc.config.DataType.TEXT),
+    wvc.config.Property(name="created_at", data_type=wvc.config.DataType.DATE, index_filterable=True),
+    wvc.config.Property(name="index_json", data_type=wvc.config.DataType.TEXT),
+    wvc.config.Property(name="chunk_count", data_type=wvc.config.DataType.INT),
+    # Filterable arrays for high-precision search ("the file where Acme Corp
+    # mentioned Q3 2025"). Mirrors what's inside `index_json` but queryable.
+    wvc.config.Property(name="entities", data_type=wvc.config.DataType.TEXT_ARRAY, index_filterable=True),
+    wvc.config.Property(name="dates", data_type=wvc.config.DataType.TEXT_ARRAY, index_filterable=True),
+    wvc.config.Property(name="doc_ids", data_type=wvc.config.DataType.TEXT_ARRAY, index_filterable=True),
+    wvc.config.Property(name="topics", data_type=wvc.config.DataType.TEXT_ARRAY, index_filterable=True),
+]
+
+CHUNK_PROPERTIES = [
+    wvc.config.Property(name="file_id", data_type=wvc.config.DataType.TEXT, index_filterable=True),
+    wvc.config.Property(name="user_id", data_type=wvc.config.DataType.TEXT, index_filterable=True),
+    wvc.config.Property(name="chunk_index", data_type=wvc.config.DataType.INT),
+    wvc.config.Property(name="chunk_text", data_type=wvc.config.DataType.TEXT),
+    wvc.config.Property(name="filename", data_type=wvc.config.DataType.TEXT),
+    wvc.config.Property(name="filetype", data_type=wvc.config.DataType.TEXT),
+    wvc.config.Property(name="created_at", data_type=wvc.config.DataType.DATE, index_filterable=True),
+]
 
 IMG_PROPERTIES = [
     wvc.config.Property(name="file_id", data_type=wvc.config.DataType.TEXT),
     wvc.config.Property(name="user_id", data_type=wvc.config.DataType.TEXT),
     wvc.config.Property(name="summary", data_type=wvc.config.DataType.TEXT),
+    wvc.config.Property(name="raw_text", data_type=wvc.config.DataType.TEXT, index_searchable=False),
     wvc.config.Property(name="filename", data_type=wvc.config.DataType.TEXT),
     wvc.config.Property(name="filetype", data_type=wvc.config.DataType.TEXT),
     wvc.config.Property(name="created_at", data_type=wvc.config.DataType.DATE, index_filterable=True),
-    wvc.config.Property(name="processing_type",data_type= wvc.config.DataType.TEXT, description="The type of processing applied to the file",),
+    wvc.config.Property(name="processing_type", data_type=wvc.config.DataType.TEXT),
 ]
+
 
 def init_schema():
     ws.ensure_collection(DOC_COLLECTION, DOC_PROPERTIES)
-
-def save_doc(data, summary, index_json, embedding):
-
-    init_schema()  # ensure collection/schema exists before upload
-
-    props = {
-        "filename": data["fileName"],
-        "file_id": str(data["_id"]),
-        "user_id": data["userId"],
-        "summary": summary,
-        "index_json": json.dumps(index_json, ensure_ascii=False),
-        "filetype": data.get("fileType"),
-        "created_at": data.get("uploadedAt"),
-    }
-    return ws.upload(DOC_COLLECTION, props, embedding)
+    ws.ensure_collection(DOC_CHUNK_COLLECTION, CHUNK_PROPERTIES)
 
 
 def init_image_schema():
     ws.ensure_collection(IMG_COLLECTION, IMG_PROPERTIES)
+    ws.ensure_collection(IMG_CHUNK_COLLECTION, CHUNK_PROPERTIES)
 
-def save_image(data, summary, embedding, processing_type):
 
-    init_image_schema()  # ensure collection/schema exists before upload
-
+def save_doc(data, summary, index_json, embedding, raw_text: str = "", chunk_count: int = 0):
+    init_schema()
+    idx = index_json or {}
     props = {
         "filename": data["fileName"],
         "file_id": str(data["_id"]),
         "user_id": data["userId"],
         "summary": summary,
+        "raw_text": raw_text or "",
+        "index_json": json.dumps(idx, ensure_ascii=False),
+        "filetype": data.get("fileType"),
+        "created_at": data.get("uploadedAt"),
+        "chunk_count": int(chunk_count),
+        # Mirror entities/dates/doc_ids/topics into filterable arrays so we can
+        # answer "files mentioning Acme Corp in Q3 2025"-style queries precisely.
+        "entities": _norm_list(idx.get("entities")),
+        "dates": _norm_list(idx.get("relevant_dates")),
+        "doc_ids": _norm_list(idx.get("document_ids")),
+        "topics": _norm_list(idx.get("technical_topics")),
+    }
+    return ws.upload(DOC_COLLECTION, props, embedding)
+
+
+def save_doc_chunks(data, chunks_with_vectors: list[tuple[int, str, list[float] | None]]) -> dict:
+    """Insert a batch of (chunk_index, chunk_text, vector) for a document.
+
+    Replaces any existing chunks for this file first so a re-extract doesn't
+    duplicate them.
+    """
+    init_schema()
+    file_id = str(data["_id"])
+    user_id = data["userId"]
+    ws.delete_by_file_id(DOC_CHUNK_COLLECTION, user_id, file_id)
+
+    base = {
+        "file_id": file_id,
+        "user_id": user_id,
+        "filename": data["fileName"],
+        "filetype": data.get("fileType"),
+        "created_at": data.get("uploadedAt"),
+    }
+    items = []
+    for idx, text, vec in chunks_with_vectors:
+        if not vec or not text:
+            continue
+        items.append(({**base, "chunk_index": int(idx), "chunk_text": text}, vec))
+    return ws.upload_many(DOC_CHUNK_COLLECTION, items)
+
+
+def save_image(data, summary, embedding, processing_type, raw_text: str = "", chunk_count: int = 0):
+    init_image_schema()
+    props = {
+        "filename": data["fileName"],
+        "file_id": str(data["_id"]),
+        "user_id": data["userId"],
+        "summary": summary,
+        "raw_text": raw_text or "",
         "filetype": data.get("fileType"),
         "created_at": data.get("uploadedAt"),
         "processing_type": processing_type,
     }
-    
     return ws.upload(IMG_COLLECTION, props, embedding)
+
+
+def save_image_chunks(data, chunks_with_vectors: list[tuple[int, str, list[float] | None]]) -> dict:
+    """Insert per-chunk vectors for an image's OCR'd text. Replaces any
+    existing chunks for this file first so a re-extract doesn't duplicate them."""
+    init_image_schema()
+    file_id = str(data["_id"])
+    user_id = data["userId"]
+    ws.delete_by_file_id(IMG_CHUNK_COLLECTION, user_id, file_id)
+    base = {
+        "file_id": file_id,
+        "user_id": user_id,
+        "filename": data["fileName"],
+        "filetype": data.get("fileType"),
+        "created_at": data.get("uploadedAt"),
+    }
+    items = []
+    for idx, text, vec in chunks_with_vectors:
+        if not vec or not text:
+            continue
+        items.append(({**base, "chunk_index": int(idx), "chunk_text": text}, vec))
+    return ws.upload_many(IMG_CHUNK_COLLECTION, items)

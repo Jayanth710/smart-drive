@@ -4,8 +4,22 @@ import UserFile, { UserFileType } from "../models/userFileModel.js";
 import logger from "../logger.js";
 import { GetSignedUrlConfig } from "@google-cloud/storage";
 import { bucket } from "../services/gcsUpload.js";
-import { deleteWeaviateFile } from "../services/queryWeaviate.js";
+import { deleteWeaviateFile, getFileRawText } from "../services/queryWeaviate.js";
 import { publishFileMetadata } from "../utils/pubsub.js";
+import { prepareFileForChat, wipeChunksForFile } from "../services/chatPreparation.js";
+import { runChatPipeline, runChatPipelineStream, ChatTurn } from "../services/chatPipeline.js";
+import { recordChatUsage } from "../services/chatUsage.js";
+
+const HISTORY_TURN_CAP = 20;
+const STREAM_IDLE_TIMEOUT_MS = 90_000;
+
+const capHistory = (history: ChatTurn[] | undefined): ChatTurn[] => {
+    if (!Array.isArray(history)) return [];
+    const valid = history.filter((t): t is ChatTurn =>
+        t != null && (t.role === 'user' || t.role === 'assistant') && typeof t.content === 'string',
+    );
+    return valid.slice(-HISTORY_TURN_CAP);
+};
 
 const getUserFile = (fileRecord: UserFileType | null) => {
     const filePath = `${fileRecord?.userId}/${fileRecord?.fileHash}`;
@@ -181,10 +195,16 @@ const triggerExtraction = async (req: AuthenticatedRequest, res: Response): Prom
         }
 
         // Reset state so the UI immediately reflects "queued" — even before
-        // the worker picks the message up.
+        // the worker picks the message up. Also flush the cached chat index:
+        // a re-extracted file should be chunked from the new text, not the old.
         fileRecord.extractionStatus = 'pending';
         fileRecord.extractionError = undefined;
+        fileRecord.chatReady = false;
         await fileRecord.save();
+        // Best-effort: wipe per-chunk vectors so the next chat re-prepares them.
+        wipeChunksForFile(userId, fileId).catch((err) =>
+            logger.warn(`wipeChunksForFile during re-extract failed: ${err}`),
+        );
 
         try {
             await publishFileMetadata(fileRecord);
@@ -211,10 +231,218 @@ const triggerExtraction = async (req: AuthenticatedRequest, res: Response): Prom
     }
 };
 
+const prepareChat = async (req: AuthenticatedRequest, res: Response): Promise<void> => {
+    const userId = req.user?._id.toString();
+    const { fileId } = req.params;
+    if (!userId || !fileId) {
+        res.status(400).json({ message: 'Missing user or file id.' });
+        return;
+    }
+    try {
+        const result = await prepareFileForChat(userId, fileId);
+        if (!result.ready) {
+            res.status(409).json({ message: result.reason });
+            return;
+        }
+        res.status(200).json(result);
+    } catch (err) {
+        logger.error(`prepareChat failed for fileId=${fileId}:`, err);
+        res.status(500).json({ message: 'Could not prepare chat.' });
+    }
+};
+
+const chatWithFile = async (req: AuthenticatedRequest, res: Response): Promise<void> => {
+    const userId = req.user?._id.toString();
+    const { fileId } = req.params;
+    const { message, history } = req.body as { message?: string; history?: ChatTurn[] };
+
+    if (!userId) {
+        res.status(401).json({ message: 'User not found' });
+        return;
+    }
+    if (!fileId) {
+        res.status(400).json({ message: 'File id is required' });
+        return;
+    }
+    if (!message || typeof message !== 'string' || !message.trim()) {
+        res.status(400).json({ message: 'A non-empty message is required.' });
+        return;
+    }
+    if (message.length > 2000) {
+        res.status(400).json({ message: 'Message too long (max 2000 chars).' });
+        return;
+    }
+
+    try {
+        const fileRecord = await UserFile.findById(fileId);
+        if (!fileRecord || fileRecord.userId.toString() !== userId) {
+            res.status(403).json({ message: 'Forbidden: You do not have access to this file.' });
+            return;
+        }
+        if (fileRecord.extractionStatus !== 'done') {
+            res.status(409).json({
+                message: 'This file is not ready for chat yet. Wait for extraction to finish.',
+                extraction_status: fileRecord.extractionStatus,
+            });
+            return;
+        }
+
+        // Lazy chat prep: chunk + embed on the first chat for a file.
+        // Idempotent + cached after the first run via the `chatReady` Mongo flag.
+        const prep = await prepareFileForChat(userId, fileId);
+        if (!prep.ready) {
+            res.status(409).json({ message: prep.reason });
+            return;
+        }
+
+        const validHistory: ChatTurn[] = capHistory(history);
+
+        recordChatUsage(userId, "persistent");
+        const result = await runChatPipeline({
+            userId,
+            fileId,
+            filename: fileRecord.fileName,
+            history: validHistory,
+            message: message.trim(),
+        });
+
+        res.status(200).json({
+            answer: result.answer,
+            sources: result.sources,
+            confidence: result.confidence,
+            refused: result.refused,
+            out_of_scope: result.out_of_scope,
+            rewritten_query: result.rewritten_query,
+            // Surface that this was the cold-start chat so the UI can tell users why
+            // the very first message took a few seconds.
+            prepared_now: !prep.cached,
+        });
+    } catch (error) {
+        logger.error(`chatWithFile failed for fileId=${fileId}:`, error);
+        res.status(500).json({ message: 'Could not chat with file.' });
+    }
+};
+
+const sseHeaders = (res: Response) => {
+    res.setHeader("Content-Type", "text/event-stream");
+    res.setHeader("Cache-Control", "no-cache, no-transform");
+    res.setHeader("Connection", "keep-alive");
+    res.setHeader("X-Accel-Buffering", "no");
+};
+
+const sseWrite = (res: Response, event: string, data: unknown): void => {
+    res.write(`event: ${event}\n`);
+    res.write(`data: ${JSON.stringify(data)}\n\n`);
+    // @ts-expect-error - flush is provided by compression / Express in dev; safe to ignore if absent.
+    res.flush?.();
+};
+
+const chatWithFileStream = async (req: AuthenticatedRequest, res: Response): Promise<void> => {
+    const userId = req.user?._id.toString();
+    const { fileId } = req.params;
+    const { message, history } = req.body as { message?: string; history?: ChatTurn[] };
+
+    if (!userId || !fileId || !message || typeof message !== 'string' || !message.trim()) {
+        res.status(400).json({ message: 'Bad request.' });
+        return;
+    }
+    if (message.length > 2000) {
+        res.status(400).json({ message: 'Message too long.' });
+        return;
+    }
+
+    try {
+        const fileRecord = await UserFile.findById(fileId);
+        if (!fileRecord || fileRecord.userId.toString() !== userId) {
+            res.status(403).json({ message: 'Forbidden.' });
+            return;
+        }
+        if (fileRecord.extractionStatus !== 'done') {
+            res.status(409).json({ message: 'Not ready for chat yet.' });
+            return;
+        }
+
+        const prep = await prepareFileForChat(userId, fileId);
+        if (!prep.ready) {
+            res.status(409).json({ message: prep.reason });
+            return;
+        }
+
+        sseHeaders(res);
+        sseWrite(res, "ready", { prepared_now: !prep.cached, redactions: prep.redactions ?? 0 });
+
+        const validHistory: ChatTurn[] = capHistory(history);
+        recordChatUsage(userId, "persistent");
+
+        // Idle-stream guard: if nothing arrives from the pipeline for 90s,
+        // close the SSE connection so the client doesn't hang.
+        let lastActivity = Date.now();
+        const idleTimer = setInterval(() => {
+            if (Date.now() - lastActivity > STREAM_IDLE_TIMEOUT_MS) {
+                clearInterval(idleTimer);
+                try { sseWrite(res, "error", { message: "Response timed out." }); res.end(); } catch { /* socket already closed */ }
+            }
+        }, 10_000);
+        req.on("close", () => clearInterval(idleTimer));
+
+        try {
+            for await (const event of runChatPipelineStream({
+                userId, fileId, filename: fileRecord.fileName,
+                history: validHistory, message: message.trim(),
+            })) {
+                lastActivity = Date.now();
+                sseWrite(res, event.type, event);
+            }
+        } finally {
+            clearInterval(idleTimer);
+        }
+        res.end();
+    } catch (err) {
+        logger.error(`chatWithFileStream failed for fileId=${fileId}:`, err);
+        if (!res.headersSent) {
+            res.status(500).json({ message: 'Stream failed.' });
+        } else {
+            sseWrite(res, "error", { message: 'Stream failed mid-response.' });
+            res.end();
+        }
+    }
+};
+
+const getFileText = async (req: AuthenticatedRequest, res: Response): Promise<void> => {
+    const userId = req.user?._id.toString();
+    const { fileId } = req.params;
+    if (!userId || !fileId) {
+        res.status(400).json({ message: 'Missing user or file id.' });
+        return;
+    }
+    try {
+        const file = await UserFile.findById(fileId);
+        if (!file || file.userId.toString() !== userId) {
+            res.status(403).json({ message: 'Forbidden.' });
+            return;
+        }
+        if (file.extractionStatus !== 'done') {
+            res.status(409).json({ message: 'Extraction not finished yet.' });
+            return;
+        }
+        const text = await getFileRawText(userId, fileId);
+        const MAX_PREVIEW = 200_000;
+        const trimmed = text.length > MAX_PREVIEW ? text.slice(0, MAX_PREVIEW) : text;
+        res.status(200).json({ text: trimmed, truncated: text.length > MAX_PREVIEW, length: text.length });
+    } catch (err) {
+        logger.error(`getFileText failed for fileId=${fileId}:`, err);
+        res.status(500).json({ message: 'Could not load extracted text.' });
+    }
+};
+
 export {
     fileExistsHandler,
     generateFileSignedUrl,
     deleteFile,
-    triggerExtraction
+    triggerExtraction,
+    chatWithFile,
+    chatWithFileStream,
+    prepareChat,
+    getFileText,
 }
 

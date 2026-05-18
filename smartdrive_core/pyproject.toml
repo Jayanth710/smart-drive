@@ -2,14 +2,17 @@
 name = "smartdrive-core"
 version = "0.1.0"
 dependencies = [
-  "google-cloud-pubsub",
-  "google-cloud-storage",
-  "python-dotenv",
-  "weaviate-client>=4.15.3",
-  "google-genai",
-  "pillow",
-  "json-repair",
-  "pymongo>=4.6"
+  # Pinned to current major to avoid breaking-change surprises (genai SDK
+  # especially has churned a lot recently). Bump intentionally, not by accident.
+  "google-cloud-pubsub>=2.30,<3",
+  "google-cloud-storage>=3.1,<4",
+  "python-dotenv>=1.0,<2",
+  "weaviate-client>=4.15.3,<5",
+  "google-genai>=1.0,<2",
+  "pillow>=10,<12",
+  "json-repair>=0.30,<1",
+  "pymongo>=4.6,<5",
+  "tiktoken>=0.7,<1"
 ]
 
 [build-system]

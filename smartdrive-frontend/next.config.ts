@@ -22,6 +22,10 @@ const nextConfig: NextConfig = {
       {
         source: '/file/:path*',
         destination: `${baseURL}/file/:path*`,
+      },
+      {
+        source: '/chat-session/:path*',
+        destination: `${baseURL}/chat-session/:path*`,
       }
     ];
   },
