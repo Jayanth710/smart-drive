@@ -1,12 +1,14 @@
 "use client";
 import ForgotPasswordForm from "@/components/ForgotPasswordForm";
 import { AuthShell } from "@/components/AuthShell";
-import React from "react";
+import React, { Suspense } from "react";
 
 const Page = () => (
-    <AuthShell>
-        <ForgotPasswordForm />
-    </AuthShell>
+    <Suspense fallback={null}>
+        <AuthShell>
+            <ForgotPasswordForm />
+        </AuthShell>
+    </Suspense>
 );
 
 export default Page;

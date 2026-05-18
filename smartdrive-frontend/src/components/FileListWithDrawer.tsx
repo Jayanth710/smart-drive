@@ -43,7 +43,6 @@ import {
     AlertDialogHeader,
     AlertDialogTitle,
 } from "./ui/alert-dialog";
-import { Popover, PopoverContent, PopoverTrigger } from "./ui/popover";
 import {
     DropdownMenu,
     DropdownMenuContent,
@@ -377,7 +376,7 @@ function FileCard({
             onKeyDown={(e) => {
                 if (e.key === "Enter" || e.key === " ") {
                     e.preventDefault();
-                    selectMode ? onToggleSelect() : onOpen();
+                    if (selectMode) onToggleSelect(); else onOpen();
                 }
             }}
             style={{ rotateX: reduce ? 0 : rotX, rotateY: reduce ? 0 : rotY, transformStyle: "preserve-3d" }}

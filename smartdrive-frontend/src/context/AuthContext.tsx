@@ -199,6 +199,15 @@ import { usePathname, useRouter } from "next/navigation";
 import React, { createContext, useContext, useEffect, useState } from "react";
 import { toast } from "react-toastify";
 
+// Paths that don't require a session. The auth context must NOT bounce
+// unauthenticated users away from these — that's where they go to
+// authenticate or recover their account in the first place.
+const PUBLIC_PATHS = ["/", "/forgot-password", "/reset-password", "/verify-email"];
+const isPublicPath = (path: string | null | undefined): boolean => {
+  if (!path) return false;
+  return PUBLIC_PATHS.some((p) => path === p || path.startsWith(p + "/") || path.startsWith(p + "?"));
+};
+
 interface UserData {
   id: string;
   email: string;
@@ -318,7 +327,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       if (!isMounted) return;
       setAuthReady(true);
 
-      if (!ok && pathname !== "/") {
+      if (!ok && !isPublicPath(pathname)) {
         window.location.replace("/");
       }
     })();
@@ -328,11 +337,11 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     };
   }, [pathname]);
 
-  if (!authReady && pathname !== "/") {
+  if (!authReady && !isPublicPath(pathname)) {
     return null;
   }
 
-  if (authReady && !data && pathname !== "/") {
+  if (authReady && !data && !isPublicPath(pathname)) {
     return null;
   }
 
