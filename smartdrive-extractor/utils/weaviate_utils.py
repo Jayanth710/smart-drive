@@ -56,6 +56,10 @@ DOC_PROPERTIES = [
     wvc.config.Property(name="dates", data_type=wvc.config.DataType.TEXT_ARRAY, index_filterable=True),
     wvc.config.Property(name="doc_ids", data_type=wvc.config.DataType.TEXT_ARRAY, index_filterable=True),
     wvc.config.Property(name="topics", data_type=wvc.config.DataType.TEXT_ARRAY, index_filterable=True),
+    # When True, this file was uploaded as "private" — no LLM ran on it. Only
+    # filename is meaningfully indexed. Search must still return it on filename
+    # match, but body/summary signals will be empty.
+    wvc.config.Property(name="is_private", data_type=wvc.config.DataType.BOOL, index_filterable=True),
 ]
 
 CHUNK_PROPERTIES = [
@@ -77,6 +81,7 @@ IMG_PROPERTIES = [
     wvc.config.Property(name="filetype", data_type=wvc.config.DataType.TEXT),
     wvc.config.Property(name="created_at", data_type=wvc.config.DataType.DATE, index_filterable=True),
     wvc.config.Property(name="processing_type", data_type=wvc.config.DataType.TEXT),
+    wvc.config.Property(name="is_private", data_type=wvc.config.DataType.BOOL, index_filterable=True),
 ]
 
 
@@ -88,6 +93,38 @@ def init_schema():
 def init_image_schema():
     ws.ensure_collection(IMG_COLLECTION, IMG_PROPERTIES)
     ws.ensure_collection(IMG_CHUNK_COLLECTION, CHUNK_PROPERTIES)
+
+
+_PRIVATE_PLACEHOLDER_SUMMARY = "Private file — content not indexed."
+
+# Match the embedding model's output dimensions (gemini-embedding-001 → 768).
+# A zero vector is fine: vector search filtered to is_private=False ignores
+# these rows, and is_private=True rows are reached only via filename BM25.
+_PRIVATE_ZERO_VECTOR_DIM = 768
+
+
+def save_doc_private(data):
+    """Write a minimal stub for a private document — no LLM was called, so we
+    have no summary, no entities, no chunks. The filename is still indexed so
+    the user can find the file by name."""
+    init_schema()
+    props = {
+        "filename": data["fileName"],
+        "file_id": str(data["_id"]),
+        "user_id": data["userId"],
+        "summary": _PRIVATE_PLACEHOLDER_SUMMARY,
+        "raw_text": "",
+        "index_json": "{}",
+        "filetype": data.get("fileType"),
+        "created_at": data.get("uploadedAt"),
+        "chunk_count": 0,
+        "entities": [],
+        "dates": [],
+        "doc_ids": [],
+        "topics": [],
+        "is_private": True,
+    }
+    return ws.upload(DOC_COLLECTION, props, [0.0] * _PRIVATE_ZERO_VECTOR_DIM)
 
 
 def save_doc(data, summary, index_json, embedding, raw_text: str = "", chunk_count: int = 0):
@@ -137,6 +174,24 @@ def save_doc_chunks(data, chunks_with_vectors: list[tuple[int, str, list[float] 
             continue
         items.append(({**base, "chunk_index": int(idx), "chunk_text": text}, vec))
     return ws.upload_many(DOC_CHUNK_COLLECTION, items)
+
+
+def save_image_private(data):
+    """Write a minimal stub for a private image — no OCR, no caption, no LLM.
+    The filename is still indexed; image bytes never reach an external API."""
+    init_image_schema()
+    props = {
+        "filename": data["fileName"],
+        "file_id": str(data["_id"]),
+        "user_id": data["userId"],
+        "summary": _PRIVATE_PLACEHOLDER_SUMMARY,
+        "raw_text": "",
+        "filetype": data.get("fileType"),
+        "created_at": data.get("uploadedAt"),
+        "processing_type": "private",
+        "is_private": True,
+    }
+    return ws.upload(IMG_COLLECTION, props, [0.0] * _PRIVATE_ZERO_VECTOR_DIM)
 
 
 def save_image(data, summary, embedding, processing_type, raw_text: str = "", chunk_count: int = 0):

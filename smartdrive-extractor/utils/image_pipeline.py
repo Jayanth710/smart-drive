@@ -4,7 +4,7 @@ from smartdrive_core.llm import get_embedding
 from smartdrive_core.metrics import stage_timer
 
 from .image_utils import image_classifier, image_ocr, image_caption
-from .weaviate_utils import save_image
+from .weaviate_utils import save_image, save_image_private
 
 logger = logging.getLogger(__name__)
 
@@ -14,9 +14,18 @@ def process_image(file_path: str, data: dict) -> dict:
 
     NOTE: per-chunk vectors for OCR'd text are computed lazily at first chat,
     not here. Most images won't be chatted with, so this saves storage + compute.
+
+    When data["isPrivate"] is True, all LLM/OCR calls are skipped — we write only
+    a filename stub so the image is still findable by name without ever sending
+    its bytes to an external model.
     """
     filename = data.get("fileName", "")
     file_id = str(data.get("_id", ""))
+
+    if data.get("isPrivate"):
+        logger.info(f"Private image {filename} (id={file_id}): skipping LLM/OCR; indexing filename only")
+        save_image_private(data)
+        return {"message": f"Saved private image '{filename}'", "created": True}
 
     try:
         with stage_timer("classify", file_id=file_id):

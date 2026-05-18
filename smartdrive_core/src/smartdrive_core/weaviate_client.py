@@ -101,8 +101,8 @@ def check_file_exists(collection_name: str, file_id: str, user_id: str) -> bool:
     try:
         col = _get_collection(collection_name)
         filters = Filter.all_of([
-            wvc.Filter.by_property("file_id").equal(file_id),
-            wvc.Filter.by_property("user_id").equal(user_id),
+            Filter.by_property("file_id").equal(file_id),
+            Filter.by_property("user_id").equal(user_id),
         ])
         resp = col.query.fetch_objects(limit=1, filters=filters)
         return bool(resp and resp.objects)
@@ -159,8 +159,8 @@ def delete_by_file_id(collection_name: str, user_id: str, file_id: str) -> int:
     try:
         col = _get_collection(collection_name)
         filters = Filter.all_of([
-            wvc.Filter.by_property("file_id").equal(file_id),
-            wvc.Filter.by_property("user_id").equal(user_id),
+            Filter.by_property("file_id").equal(file_id),
+            Filter.by_property("user_id").equal(user_id),
         ])
         before = col.query.fetch_objects(limit=1, filters=filters)
         if not before or not before.objects:

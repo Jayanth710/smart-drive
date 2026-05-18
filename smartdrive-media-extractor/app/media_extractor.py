@@ -5,7 +5,7 @@ from smartdrive_core.mongo_status import update_status
 from smartdrive_core.llm import LLM_media_summarizer, get_embedding
 from smartdrive_core.metrics import stage_timer
 from utils.media_utils import audio_extractor, video_to_audio
-from utils.weaviate_utils import save_media, MEDIA_COLLECTION
+from utils.weaviate_utils import save_media, save_media_private, MEDIA_COLLECTION
 
 logger = logging.getLogger(__name__)
 
@@ -45,6 +45,11 @@ def media_extractor(media_path: str, data: dict):
             return {"message": f"Skipping non-media mime={mime}", "created": False, "error_kind": "unsupported_type"}
 
         update_status(str(file_id), "processing")
+
+        if data.get("isPrivate"):
+            logger.info(f"Private media {filename} (id={file_id}): skipping transcription/LLM; indexing filename only")
+            save_media_private(data)
+            return _finish(file_id, "done", f"Saved {filename} as private (audio not transcribed)", True)
 
         if check_file_exists(MEDIA_COLLECTION, file_id, user_id):
             logger.info(f"{filename} already exists in Weaviate. Skipping.")
