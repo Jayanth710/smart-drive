@@ -93,7 +93,7 @@ export const postSSE = (
                     buffer = buffer.slice(sepIdx + 2);
 
                     let event = "message";
-                    let dataLines: string[] = [];
+                    const dataLines: string[] = [];
                     for (const line of frame.split("\n")) {
                         if (line.startsWith("event:")) event = line.slice(6).trim();
                         else if (line.startsWith("data:")) dataLines.push(line.slice(5).trim());

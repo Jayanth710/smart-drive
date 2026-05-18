@@ -229,7 +229,7 @@ const rerank = async (query: string, candidates: RetrievedChunk[], keep = 5): Pr
     // Trim to a manageable rerank pool to keep the prompt small.
     const pool = candidates.slice(0, 20);
     const formatted = pool
-        .map((c, i) => `[Chunk index=${c.chunk_index}]\n${c.chunk_text.slice(0, 800)}`)
+        .map((c) => `[Chunk index=${c.chunk_index}]\n${c.chunk_text.slice(0, 800)}`)
         .join("\n\n---\n\n");
     try {
         const out = await geminiJSON<{ scores: { chunk_index: number; score: number }[] }>(

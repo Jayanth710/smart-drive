@@ -8,6 +8,18 @@ import { deleteWeaviateFile } from "../services/queryWeaviate.js";
 import { publishFileMetadata } from "../utils/pubsub.js";
 import { prepareFileForChat, wipeChunksForFile } from "../services/chatPreparation.js";
 import { runChatPipeline, runChatPipelineStream, ChatTurn } from "../services/chatPipeline.js";
+import { recordChatUsage } from "../services/chatUsage.js";
+
+const HISTORY_TURN_CAP = 20;
+const STREAM_IDLE_TIMEOUT_MS = 90_000;
+
+const capHistory = (history: ChatTurn[] | undefined): ChatTurn[] => {
+    if (!Array.isArray(history)) return [];
+    const valid = history.filter((t): t is ChatTurn =>
+        t != null && (t.role === 'user' || t.role === 'assistant') && typeof t.content === 'string',
+    );
+    return valid.slice(-HISTORY_TURN_CAP);
+};
 
 const getUserFile = (fileRecord: UserFileType | null) => {
     const filePath = `${fileRecord?.userId}/${fileRecord?.fileHash}`;
@@ -283,12 +295,9 @@ const chatWithFile = async (req: AuthenticatedRequest, res: Response): Promise<v
             return;
         }
 
-        const validHistory: ChatTurn[] = Array.isArray(history)
-            ? history.filter((t): t is ChatTurn =>
-                t != null && (t.role === 'user' || t.role === 'assistant') && typeof t.content === 'string',
-            )
-            : [];
+        const validHistory: ChatTurn[] = capHistory(history);
 
+        recordChatUsage(userId, "persistent");
         const result = await runChatPipeline({
             userId,
             fileId,
@@ -360,20 +369,32 @@ const chatWithFileStream = async (req: AuthenticatedRequest, res: Response): Pro
         }
 
         sseHeaders(res);
-        // Tell the client whether this chat is paying the cold-start cost.
         sseWrite(res, "ready", { prepared_now: !prep.cached });
 
-        const validHistory: ChatTurn[] = Array.isArray(history)
-            ? history.filter((t): t is ChatTurn =>
-                t != null && (t.role === 'user' || t.role === 'assistant') && typeof t.content === 'string',
-            )
-            : [];
+        const validHistory: ChatTurn[] = capHistory(history);
+        recordChatUsage(userId, "persistent");
 
-        for await (const event of runChatPipelineStream({
-            userId, fileId, filename: fileRecord.fileName,
-            history: validHistory, message: message.trim(),
-        })) {
-            sseWrite(res, event.type, event);
+        // Idle-stream guard: if nothing arrives from the pipeline for 90s,
+        // close the SSE connection so the client doesn't hang.
+        let lastActivity = Date.now();
+        const idleTimer = setInterval(() => {
+            if (Date.now() - lastActivity > STREAM_IDLE_TIMEOUT_MS) {
+                clearInterval(idleTimer);
+                try { sseWrite(res, "error", { message: "Response timed out." }); res.end(); } catch { /* socket already closed */ }
+            }
+        }, 10_000);
+        req.on("close", () => clearInterval(idleTimer));
+
+        try {
+            for await (const event of runChatPipelineStream({
+                userId, fileId, filename: fileRecord.fileName,
+                history: validHistory, message: message.trim(),
+            })) {
+                lastActivity = Date.now();
+                sseWrite(res, event.type, event);
+            }
+        } finally {
+            clearInterval(idleTimer);
         }
         res.end();
     } catch (err) {

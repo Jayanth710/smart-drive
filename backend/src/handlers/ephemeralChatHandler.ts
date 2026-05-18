@@ -11,6 +11,16 @@ import {
 } from "../services/ephemeralChatStore.js";
 import { runEphemeralChat, runEphemeralChatStream } from "../services/ephemeralChatPipeline.js";
 import type { ChatTurn } from "../services/chatPipeline.js";
+import { recordChatUsage } from "../services/chatUsage.js";
+
+const HISTORY_TURN_CAP = 20;
+const STREAM_IDLE_TIMEOUT_MS = 90_000;
+const capHistory = (h: ChatTurn[] | undefined): ChatTurn[] =>
+    Array.isArray(h)
+        ? h.filter((t): t is ChatTurn =>
+            t != null && (t.role === 'user' || t.role === 'assistant') && typeof t.content === 'string',
+        ).slice(-HISTORY_TURN_CAP)
+        : [];
 
 // Memory storage — file never touches disk.
 export const ephemeralUpload = multer({
