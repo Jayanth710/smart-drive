@@ -1,4 +1,5 @@
 import SideBar from "@/components/SideBar";
+import { QuickChatWidget } from "@/components/QuickChatWidget";
 
 export default function DashboardLayout({
   children,
@@ -12,6 +13,7 @@ export default function DashboardLayout({
           {children}
         </div>
       </SideBar>
+      <QuickChatWidget />
     </div>
   );
 }

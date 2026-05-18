@@ -12,6 +12,7 @@ import {
     IconVideo,
     IconSettings,
     IconUser,
+    IconSparkles,
 } from "@tabler/icons-react";
 import { motion } from "motion/react";
 import { cn } from "@/lib/utils";
@@ -48,6 +49,7 @@ const SideBar = ({ children }: SideBarProps) => {
         { label: "Documents", href: "/documents", icon: <IconFileText className="h-5 w-5 shrink-0" /> },
         { label: "Images", href: "/images", icon: <IconPhoto className="h-5 w-5 shrink-0" /> },
         { label: "Media", href: "/media", icon: <IconVideo className="h-5 w-5 shrink-0" /> },
+        { label: "Quick chat", href: "/quick-chat", icon: <IconSparkles className="h-5 w-5 shrink-0" /> },
     ];
 
     const utilityLinks: NavItem[] = [

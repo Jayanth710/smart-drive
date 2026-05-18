@@ -1,93 +1,71 @@
-import os
-import cv2
+"""Image processing utilities.
+
+Returns are intentionally consistent: a tuple of (summary_str_or_None, raw_text_str).
+Callers compute embeddings themselves so we don't pay for them on failure paths.
+"""
+
 import logging
-from PIL import Image
+import cv2
 import numpy as np
+from PIL import Image
+
 from smartdrive_core.llm import LLM_image_summarizer, LLM_caption_generator
-from .document_extractor import extract_content  # your docling-based extractor
+from .docling import extract_content
 
 logger = logging.getLogger(__name__)
 
+
 def image_classifier(image_path: str, threshold: float = 850.0) -> str:
-    """
-    Analyzes an image's "busyness" using Laplacian variance to decide if it's
-    better suited for OCR or for captioning. This is a fast, local method.
+    """Decide between OCR and captioning based on image "busyness".
 
-    Args:
-        image_path: The local path to the image file (e.g., in /tmp/).
-        threshold: The variance threshold to distinguish between text and photos.
-                   This value may need tuning based on your documents.
-
-    Returns:
-        A string, either 'OCR' or 'CAPTION'.
+    Laplacian variance: documents/text have high variance (sharp edges);
+    photos have low variance. Tuned by `threshold`. Falls back to CAPTION
+    on any error so we never lose the file entirely.
     """
     try:
         with Image.open(image_path) as img:
-            gray_image_for_cv2 = cv2.cvtColor(np.array(img.convert('RGB')), cv2.COLOR_RGB2GRAY)
-
-        variance = cv2.Laplacian(gray_image_for_cv2, cv2.CV_64F).var()
+            gray = cv2.cvtColor(np.array(img.convert("RGB")), cv2.COLOR_RGB2GRAY)
+        variance = cv2.Laplacian(gray, cv2.CV_64F).var()
         logger.info(f"Image Laplacian variance: {variance:.2f}")
         return "OCR" if variance > threshold else "CAPTION"
     except Exception as e:
         logger.error(f"Local image classification failed: {e}")
         return "CAPTION"
 
-def image_ocr(image_path: str):
+
+def image_ocr(image_path: str) -> tuple[str | None, str]:
+    """Run EasyOCR (via docling), then summarise the extracted text.
+
+    Returns: (summary_or_None, raw_ocr_text)
     """
-    Performs OCR on an image file using the EasyOCR library and returns the
-    extracted text as a single string.
-
-    Args:
-        image_path: The full path to the local image file (e.g., in /tmp/).
-
-    Returns:
-        A string containing all the extracted text.
-    """
-
     try:
+        extracted = extract_content(image_path)
+        raw_text = (extracted or {}).get("markdown", "") or ""
+        if not raw_text:
+            logger.warning(f"EasyOCR returned no text from {image_path}")
+            return None, ""
 
-        extracted_content = extract_content(image_path)
-        data_extracted = extracted_content.get("markdown", "")
-
-        if not data_extracted:
-            logger.warning(f"EasyOCR did not extract any text from {image_path}.")
-            return {
-                "message": f"No text extracted from the image.",
-                "created": False
-            }
-        
-        logger.info("EasyOCR extraction completed successfully.")
-        summary, embeddings = LLM_image_summarizer(data_extracted)
-
-        if not summary or not embeddings:
-            logger.error("LLM failed to summarize the extracted text.")
-            return {
-                "message": "LLM failed to summarize the extracted text.",
-                "created": False
-            }
-
-        return summary, embeddings
-    
+        summary, _ = LLM_image_summarizer(raw_text)
+        if not summary:
+            logger.error("LLM_image_summarizer returned no summary.")
+            return None, raw_text
+        return summary, raw_text
     except Exception as e:
-        logger.error(f"Error during EasyOCR processing: {e}")
-        return ""
-    
-def image_caption(image_path: str):
+        logger.error(f"Error during EasyOCR processing: {e}", exc_info=True)
+        return None, ""
+
+
+def image_caption(image_path: str) -> tuple[str | None, str]:
+    """Caption a photo with the multimodal LLM. Returns (caption_or_None, '').
+
+    Photos don't have OCR text, so raw_text is always empty here.
     """
-    Generates a caption for an image file using the LLM Captioning and returns
-    the caption as a string."""
-
     try:
-        summary, embeddings = LLM_caption_generator(image_path)
-
-        if not summary or not embeddings:
-            logger.error("LLM failed to summarize the extracted text.")
-            return {
-                "message": "LLM failed to summarize the extracted text.",
-                "created": False
-            }
-        
-        return summary, embeddings
+        summary, _ = LLM_caption_generator(image_path)
+        if not summary:
+            logger.error("LLM_caption_generator returned no caption.")
+            return None, ""
+        return summary, ""
     except Exception as e:
-        logger.error(f"An error occurred during LLM Captioning: {e}", exc_info=True)
-        return f"[Captioning failed: {e}]"
+        logger.error(f"An error occurred during LLM captioning: {e}", exc_info=True)
+        return None, ""

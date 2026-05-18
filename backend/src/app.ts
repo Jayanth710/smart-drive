@@ -6,6 +6,7 @@ dotenv.config();
 import { validateEnv } from "./config/validateEnv.js";
 validateEnv();
 import uploadRouter from "./routes/upload.js";
+import ephemeralRouter from "./routes/ephemeralChat.js";
 import { setupPubSub } from "./utils/pubsub.js";
 import queryRouter from "./routes/query.js";
 import userRouter from "./routes/auth.js";
@@ -46,6 +47,7 @@ app.use('/api', userRouter)
 app.use('/upload', uploadRouter);
 app.use('/search', queryRouter);
 app.use('/file', fileRouter)
+app.use('/chat-session', ephemeralRouter);
 
 app.listen(PORT, () => {
     console.log(`Running on http://localhost:${PORT}`)
