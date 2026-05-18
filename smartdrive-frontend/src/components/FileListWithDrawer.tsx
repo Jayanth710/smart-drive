@@ -736,6 +736,9 @@ export function FileListWithDrawer({
 
     const [previewUrl, setPreviewUrl] = useState<string | null>(null);
     const [previewLoading, setPreviewLoading] = useState(false);
+    const [previewText, setPreviewText] = useState<string | null>(null);
+    const [previewTextLoading, setPreviewTextLoading] = useState(false);
+    const [previewTextTruncated, setPreviewTextTruncated] = useState(false);
 
     // Which drawer tab is active. We control this so the "Chat with this file"
     // action button can jump to the Chat tab. Resets when the file changes.
@@ -932,6 +935,8 @@ export function FileListWithDrawer({
 
             setPreviewUrl(null);
             setPreviewLoading(true);
+            setPreviewText(null);
+            setPreviewTextTruncated(false);
 
             try {
                 const res = await apiClient.get(`/file/${selectedFile?.file_id}/url?action=view`);
@@ -945,6 +950,31 @@ export function FileListWithDrawer({
 
         run();
     }, [drawerOpen, selectedFile]);
+
+    // Lazy extracted-text fallback for non-image/non-pdf previews (docx, txt, etc.).
+    useEffect(() => {
+        const run = async () => {
+            if (!drawerOpen || !selectedFile) return;
+            if (drawerTab !== "preview") return;
+            const ft = (selectedFile.filetype || "").toLowerCase();
+            const needsTextFallback = !ft.includes("image") && !ft.includes("pdf");
+            if (!needsTextFallback) return;
+            if (previewText !== null || previewTextLoading) return;
+            if ((selectedFile.extraction_status ?? "done") !== "done") return;
+
+            setPreviewTextLoading(true);
+            try {
+                const res = await apiClient.get(`/file/${selectedFile.file_id}/text`);
+                setPreviewText(typeof res.data?.text === "string" ? res.data.text : "");
+                setPreviewTextTruncated(!!res.data?.truncated);
+            } catch {
+                setPreviewText("");
+            } finally {
+                setPreviewTextLoading(false);
+            }
+        };
+        run();
+    }, [drawerOpen, drawerTab, selectedFile, previewText, previewTextLoading]);
 
     const visibleFilters = hideTypeFilter
         ? FILTERS.filter((f) => f.value === "all" || f.value === "failed")
@@ -1292,6 +1322,17 @@ export function FileListWithDrawer({
                                                 />
                                             ) : isPdf(selectedFile.filetype) ? (
                                                 <iframe src={previewUrl} className="w-full h-[520px] rounded-md border" title="PDF Preview" />
+                                            ) : previewTextLoading ? (
+                                                <div className="text-sm text-muted-foreground">Loading extracted text…</div>
+                                            ) : previewText && previewText.trim().length > 0 ? (
+                                                <div>
+                                                    <div className="text-[11px] uppercase tracking-wider text-muted-foreground mb-1.5">
+                                                        Extracted text {previewTextTruncated ? "(truncated)" : ""}
+                                                    </div>
+                                                    <pre className="text-xs whitespace-pre-wrap font-mono leading-relaxed bg-muted/30 p-3 rounded-md border max-h-[60vh] overflow-auto">
+                                                        {previewText}
+                                                    </pre>
+                                                </div>
                                             ) : (
                                                 <div className="text-sm text-muted-foreground">Preview not supported. Use “View”.</div>
                                             )}

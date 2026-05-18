@@ -104,11 +104,8 @@ export const ephemeralChat = async (req: AuthenticatedRequest, res: Response): P
         return;
     }
 
-    const validHistory: ChatTurn[] = Array.isArray(history)
-        ? history.filter((t): t is ChatTurn =>
-            t != null && (t.role === "user" || t.role === "assistant") && typeof t.content === "string",
-        )
-        : [];
+    const validHistory: ChatTurn[] = capHistory(history);
+    recordChatUsage(userId, "ephemeral");
 
     try {
         const result = await runEphemeralChat({
@@ -151,26 +148,34 @@ export const ephemeralChatStream = async (req: AuthenticatedRequest, res: Respon
         res.status(404).json({ message: "Session not found or expired." }); return;
     }
 
-    const validHistory: ChatTurn[] = Array.isArray(history)
-        ? history.filter((t): t is ChatTurn =>
-            t != null && (t.role === "user" || t.role === "assistant") && typeof t.content === "string",
-        )
-        : [];
+    const validHistory: ChatTurn[] = capHistory(history);
+    recordChatUsage(userId, "ephemeral");
 
     sseHeaders(res);
+    let lastActivity = Date.now();
+    const idleTimer = setInterval(() => {
+        if (Date.now() - lastActivity > STREAM_IDLE_TIMEOUT_MS) {
+            clearInterval(idleTimer);
+            try { sseWrite(res, "error", { message: "Response timed out." }); res.end(); } catch { /* socket already closed */ }
+        }
+    }, 10_000);
+    req.on("close", () => clearInterval(idleTimer));
+
     try {
         for await (const event of runEphemeralChatStream({
             filename: sess.filename, chunks: sess.chunks,
             history: validHistory, message: message.trim(),
         })) {
+            lastActivity = Date.now();
             sseWrite(res, event.type, event);
         }
-        res.end();
     } catch (err) {
         logger.error(`ephemeral stream error session=${sessionId}: ${err}`);
         sseWrite(res, "error", { message: "Stream failed." });
-        res.end();
+    } finally {
+        clearInterval(idleTimer);
     }
+    res.end();
 };
 
 export const getEphemeralSessionText = async (req: AuthenticatedRequest, res: Response): Promise<void> => {

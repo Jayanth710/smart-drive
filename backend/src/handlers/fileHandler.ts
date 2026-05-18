@@ -4,7 +4,7 @@ import UserFile, { UserFileType } from "../models/userFileModel.js";
 import logger from "../logger.js";
 import { GetSignedUrlConfig } from "@google-cloud/storage";
 import { bucket } from "../services/gcsUpload.js";
-import { deleteWeaviateFile } from "../services/queryWeaviate.js";
+import { deleteWeaviateFile, getFileRawText } from "../services/queryWeaviate.js";
 import { publishFileMetadata } from "../utils/pubsub.js";
 import { prepareFileForChat, wipeChunksForFile } from "../services/chatPreparation.js";
 import { runChatPipeline, runChatPipelineStream, ChatTurn } from "../services/chatPipeline.js";
@@ -369,7 +369,7 @@ const chatWithFileStream = async (req: AuthenticatedRequest, res: Response): Pro
         }
 
         sseHeaders(res);
-        sseWrite(res, "ready", { prepared_now: !prep.cached });
+        sseWrite(res, "ready", { prepared_now: !prep.cached, redactions: prep.redactions ?? 0 });
 
         const validHistory: ChatTurn[] = capHistory(history);
         recordChatUsage(userId, "persistent");
@@ -408,6 +408,33 @@ const chatWithFileStream = async (req: AuthenticatedRequest, res: Response): Pro
     }
 };
 
+const getFileText = async (req: AuthenticatedRequest, res: Response): Promise<void> => {
+    const userId = req.user?._id.toString();
+    const { fileId } = req.params;
+    if (!userId || !fileId) {
+        res.status(400).json({ message: 'Missing user or file id.' });
+        return;
+    }
+    try {
+        const file = await UserFile.findById(fileId);
+        if (!file || file.userId.toString() !== userId) {
+            res.status(403).json({ message: 'Forbidden.' });
+            return;
+        }
+        if (file.extractionStatus !== 'done') {
+            res.status(409).json({ message: 'Extraction not finished yet.' });
+            return;
+        }
+        const text = await getFileRawText(userId, fileId);
+        const MAX_PREVIEW = 200_000;
+        const trimmed = text.length > MAX_PREVIEW ? text.slice(0, MAX_PREVIEW) : text;
+        res.status(200).json({ text: trimmed, truncated: text.length > MAX_PREVIEW, length: text.length });
+    } catch (err) {
+        logger.error(`getFileText failed for fileId=${fileId}:`, err);
+        res.status(500).json({ message: 'Could not load extracted text.' });
+    }
+};
+
 export {
     fileExistsHandler,
     generateFileSignedUrl,
@@ -416,5 +443,6 @@ export {
     chatWithFile,
     chatWithFileStream,
     prepareChat,
+    getFileText,
 }
 

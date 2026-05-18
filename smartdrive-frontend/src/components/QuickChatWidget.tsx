@@ -17,11 +17,12 @@ export function QuickChatWidget() {
         <Link
             href="/quick-chat"
             aria-label="Chat with a file without saving it"
-            className="fixed bottom-6 right-6 z-40 inline-flex items-center gap-2 rounded-full px-4 py-2.5 text-sm font-medium text-white shadow-lg bg-gradient-to-br from-violet-600 to-fuchsia-500 hover:from-violet-700 hover:to-fuchsia-600 transition"
+            className="fixed bottom-4 right-4 sm:bottom-6 sm:right-6 z-40 inline-flex items-center gap-2 rounded-full px-3 py-2 sm:px-4 sm:py-2.5 text-sm font-medium text-white shadow-lg bg-gradient-to-br from-violet-600 to-fuchsia-500 hover:from-violet-700 hover:to-fuchsia-600 transition"
         >
             <IconSparkles size={16} />
-            Chat with a file
-            <span className="text-[10px] uppercase tracking-wider opacity-80 px-1.5 py-0.5 rounded bg-white/15">
+            <span className="hidden sm:inline">Chat with a file</span>
+            <span className="sm:hidden">Chat</span>
+            <span className="hidden sm:inline text-[10px] uppercase tracking-wider opacity-80 px-1.5 py-0.5 rounded bg-white/15">
                 no save
             </span>
         </Link>

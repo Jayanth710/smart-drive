@@ -1,11 +1,11 @@
 "use client";
-import React, { useEffect, useRef, useState } from "react";
+import React, { useCallback, useEffect, useRef, useState } from "react";
 import apiClient from "@/lib/api";
 import { Button } from "@/components/ui/button";
 import {
     IconCloudUpload, IconSparkles, IconLoader2, IconSend, IconUser,
     IconAlertTriangle, IconX, IconShieldCheck, IconCircleDashed, IconCircleX,
-    IconFileText,
+    IconFileText, IconPlayerStop, IconCopy, IconCheck, IconRefresh, IconLock,
 } from "@tabler/icons-react";
 import { postSSE, Source, Confidence, StreamEvent } from "@/lib/chatStream";
 import { ChatMarkdown } from "@/components/ChatMarkdown";
@@ -44,10 +44,26 @@ function ConfidencePill({ value }: { value: Confidence }) {
     );
 }
 
+function CopyButton({ text }: { text: string }) {
+    const [done, setDone] = useState(false);
+    return (
+        <button
+            onClick={async () => {
+                try { await navigator.clipboard.writeText(text); setDone(true); setTimeout(() => setDone(false), 1200); } catch { /* clipboard unavailable */ }
+            }}
+            title="Copy answer"
+            className="text-muted-foreground hover:text-foreground transition"
+        >
+            {done ? <IconCheck size={12} /> : <IconCopy size={12} />}
+        </button>
+    );
+}
+
 export default function QuickChatPage() {
     const [sessionId, setSessionId] = useState<string | null>(null);
     const [filename, setFilename] = useState<string>("");
     const [chunkCount, setChunkCount] = useState<number>(0);
+    const [redactions, setRedactions] = useState<number>(0);
     const [uploading, setUploading] = useState(false);
     const [uploadError, setUploadError] = useState<string | null>(null);
 
@@ -56,30 +72,28 @@ export default function QuickChatPage() {
     const [busy, setBusy] = useState(false);
     const [chatError, setChatError] = useState<string | null>(null);
 
-    // "View extracted text" modal — pulls the parsed text from the session on demand
-    // so users can sanity-check what the AI actually sees.
     const [textViewerOpen, setTextViewerOpen] = useState(false);
     const [extractedText, setExtractedText] = useState<string | null>(null);
     const [extractedTruncated, setExtractedTruncated] = useState(false);
     const [extractedLoading, setExtractedLoading] = useState(false);
-    const scrollerRef = useRef<HTMLDivElement | null>(null);
 
-    // Best-effort cleanup so the backend reclaims memory the moment the user
-    // closes/navigates away. The server also evicts idle sessions after 30 min.
+    const scrollerRef = useRef<HTMLDivElement | null>(null);
+    const textareaRef = useRef<HTMLTextAreaElement | null>(null);
+    const streamingBufferRef = useRef<string>("");
+    const cancelRef = useRef<(() => void) | null>(null);
+
+    // Cleanup on unmount + tab close.
     useEffect(() => {
         if (!sessionId) return;
         const onUnload = () => {
             try {
-                // sendBeacon survives tab close where fetch wouldn't.
                 navigator.sendBeacon?.(`/chat-session/${sessionId}`, new Blob([JSON.stringify({})], { type: "application/json" }));
-            } catch {
-                // ignore
-            }
+            } catch { /* ignore */ }
         };
         window.addEventListener("beforeunload", onUnload);
         return () => {
             window.removeEventListener("beforeunload", onUnload);
-            // Also fire on component unmount (e.g., user clicks "New file").
+            cancelRef.current?.();
             apiClient.delete(`/chat-session/${sessionId}`).catch(() => undefined);
         };
     }, [sessionId]);
@@ -89,30 +103,12 @@ export default function QuickChatPage() {
         if (node) node.scrollTop = node.scrollHeight;
     }, [turns, busy]);
 
-    const handleUpload = async (file: File) => {
-        setUploadError(null);
-        setUploading(true);
-        try {
-            const form = new FormData();
-            form.append("file", file);
-            const res = await apiClient.post("/chat-session/upload", form, {
-                headers: { "Content-Type": "multipart/form-data" },
-            });
-            const data = res.data as { session_id: string; filename: string; chunk_count: number };
-            setSessionId(data.session_id);
-            setFilename(data.filename);
-            setChunkCount(data.chunk_count);
-            setTurns([]);
-        } catch (err) {
-            const e = err as { response?: { data?: { message?: string } } };
-            setUploadError(e?.response?.data?.message ?? "Could not process the file.");
-        } finally {
-            setUploading(false);
-        }
-    };
-
-    const streamingBufferRef = useRef<string>("");
-    const cancelRef = useRef<(() => void) | null>(null);
+    useEffect(() => {
+        const ta = textareaRef.current;
+        if (!ta) return;
+        ta.style.height = "auto";
+        ta.style.height = Math.min(160, ta.scrollHeight) + "px";
+    }, [input]);
 
     const patchLastAssistant = (patch: Partial<Turn>) => {
         setTurns((prev) => {
@@ -124,17 +120,35 @@ export default function QuickChatPage() {
         });
     };
 
-    const send = () => {
+    const handleUpload = async (file: File) => {
+        setUploadError(null);
+        setUploading(true);
+        try {
+            const form = new FormData();
+            form.append("file", file);
+            const res = await apiClient.post("/chat-session/upload", form, {
+                headers: { "Content-Type": "multipart/form-data" },
+            });
+            const data = res.data as { session_id: string; filename: string; chunk_count: number; redactions?: number };
+            setSessionId(data.session_id);
+            setFilename(data.filename);
+            setChunkCount(data.chunk_count);
+            setRedactions(data.redactions ?? 0);
+            setTurns([]);
+        } catch (err) {
+            const e = err as { response?: { data?: { message?: string } } };
+            setUploadError(e?.response?.data?.message ?? "Could not process the file.");
+        } finally {
+            setUploading(false);
+        }
+    };
+
+    const runChat = useCallback((msg: string, historyForRequest: Turn[]) => {
         if (!sessionId) return;
-        const msg = input.trim();
-        if (!msg || busy) return;
         setChatError(null);
-        setInput("");
         setBusy(true);
 
-        const historyForRequest = turns.map(({ role, content }) => ({ role, content }));
         streamingBufferRef.current = "";
-
         setTurns((prev) => [
             ...prev,
             { role: "user", content: msg },
@@ -143,16 +157,12 @@ export default function QuickChatPage() {
 
         cancelRef.current = postSSE(
             `/chat-session/${sessionId}/chat-stream`,
-            { message: msg, history: historyForRequest },
+            { message: msg, history: historyForRequest.map(({ role, content }) => ({ role, content })) },
             {
                 onEvent: (event: StreamEvent) => {
                     switch (event.type) {
-                        case "prep":
-                            patchLastAssistant({ rewritten_query: event.rewritten_query });
-                            break;
-                        case "no_sources":
-                            patchLastAssistant({ content: "" });
-                            break;
+                        case "prep": patchLastAssistant({ rewritten_query: event.rewritten_query }); break;
+                        case "no_sources": patchLastAssistant({ content: "" }); break;
                         case "delta":
                             streamingBufferRef.current += event.text;
                             patchLastAssistant({ content: streamingBufferRef.current });
@@ -160,12 +170,8 @@ export default function QuickChatPage() {
                         case "done":
                             streamingBufferRef.current = "";
                             patchLastAssistant({
-                                content: event.answer,
-                                sources: event.sources,
-                                confidence: event.confidence,
-                                refused: event.refused,
-                                rewritten_query: event.rewritten_query,
-                                streaming: false,
+                                content: event.answer, sources: event.sources, confidence: event.confidence,
+                                refused: event.refused, rewritten_query: event.rewritten_query, streaming: false,
                             });
                             setBusy(false);
                             break;
@@ -190,12 +196,39 @@ export default function QuickChatPage() {
                 },
             },
         );
+    }, [sessionId]);
+
+    const send = () => {
+        const msg = input.trim();
+        if (!msg || busy) return;
+        setInput("");
+        runChat(msg, turns);
+    };
+
+    const stop = () => {
+        cancelRef.current?.();
+        cancelRef.current = null;
+        patchLastAssistant({ streaming: false });
+        setBusy(false);
+    };
+
+    const regenerate = () => {
+        if (busy) return;
+        let lastUserIdx = -1;
+        for (let i = turns.length - 1; i >= 0; i--) {
+            if (turns[i].role === "user") { lastUserIdx = i; break; }
+        }
+        if (lastUserIdx === -1) return;
+        const lastUserMsg = turns[lastUserIdx].content;
+        const truncated = turns.slice(0, lastUserIdx);
+        setTurns(truncated);
+        runChat(lastUserMsg, truncated);
     };
 
     const openTextViewer = async () => {
         if (!sessionId) return;
         setTextViewerOpen(true);
-        if (extractedText !== null) return; // already loaded
+        if (extractedText !== null) return;
         setExtractedLoading(true);
         try {
             const res = await apiClient.get(`/chat-session/${sessionId}/text`);
@@ -209,12 +242,14 @@ export default function QuickChatPage() {
     };
 
     const startOver = () => {
+        cancelRef.current?.();
         if (sessionId) {
             apiClient.delete(`/chat-session/${sessionId}`).catch(() => undefined);
         }
         setSessionId(null);
         setFilename("");
         setChunkCount(0);
+        setRedactions(0);
         setTurns([]);
         setInput("");
         setChatError(null);
@@ -243,7 +278,6 @@ export default function QuickChatPage() {
                 )}
             </div>
 
-            {/* File / upload state */}
             {!sessionId ? (
                 <UploadCard onPick={handleUpload} uploading={uploading} error={uploadError} />
             ) : (
@@ -257,8 +291,18 @@ export default function QuickChatPage() {
                         >
                             {filename}
                         </button>
-                        <div className="text-[11px] text-muted-foreground">
-                            {chunkCount} chunk{chunkCount === 1 ? "" : "s"} indexed in memory · auto-deletes after 30 min idle
+                        <div className="text-[11px] text-muted-foreground flex items-center gap-2 flex-wrap">
+                            <span>{chunkCount} chunk{chunkCount === 1 ? "" : "s"} indexed in memory</span>
+                            <span>·</span>
+                            <span>auto-deletes after 30 min idle</span>
+                            {redactions > 0 && (
+                                <>
+                                    <span>·</span>
+                                    <span className="inline-flex items-center gap-0.5 text-emerald-700 dark:text-emerald-300" title="Personal info (emails, phone numbers, API keys) was stripped from the embeddings.">
+                                        <IconLock size={10} /> {redactions} PII span{redactions === 1 ? "" : "s"} redacted
+                                    </span>
+                                </>
+                            )}
                         </div>
                     </div>
                 </div>
@@ -271,9 +315,7 @@ export default function QuickChatPage() {
                         Extracted text · what the AI sees when answering your questions.
                     </DialogDescription>
                     <div className="mt-3 flex-1 overflow-auto rounded-md border bg-muted/30 p-3 text-xs whitespace-pre-wrap font-mono">
-                        {extractedLoading
-                            ? "Loading…"
-                            : (extractedText ?? "")}
+                        {extractedLoading ? "Loading…" : (extractedText ?? "")}
                         {extractedTruncated && (
                             <div className="mt-2 text-[11px] italic text-muted-foreground">
                                 (truncated for display)
@@ -283,7 +325,6 @@ export default function QuickChatPage() {
                 </DialogContent>
             </Dialog>
 
-            {/* Conversation */}
             {sessionId && (
                 <>
                     <div
@@ -307,13 +348,26 @@ export default function QuickChatPage() {
                                             <div className="text-[10px] uppercase tracking-wider text-muted-foreground">
                                                 {t.role === "user" ? "You" : "Assistant"}
                                             </div>
-                                            {t.role === "assistant" && t.confidence && (
-                                                <ConfidencePill value={t.confidence} />
-                                            )}
+                                            {t.role === "assistant" && t.confidence && <ConfidencePill value={t.confidence} />}
                                             {t.role === "assistant" && t.streaming && (
                                                 <span className="inline-flex items-center gap-1 text-[10px] text-muted-foreground">
                                                     <IconLoader2 size={10} className="animate-spin" /> streaming…
                                                 </span>
+                                            )}
+                                            {t.role === "assistant" && !t.streaming && t.content && (
+                                                <div className="ml-auto flex items-center gap-2">
+                                                    <CopyButton text={t.content} />
+                                                    {i === turns.length - 1 && (
+                                                        <button
+                                                            onClick={regenerate}
+                                                            disabled={busy}
+                                                            title="Regenerate answer"
+                                                            className="text-muted-foreground hover:text-foreground disabled:opacity-50 transition"
+                                                        >
+                                                            <IconRefresh size={12} />
+                                                        </button>
+                                                    )}
+                                                </div>
                                             )}
                                         </div>
                                         {t.role === "assistant" && t.rewritten_query && (
@@ -353,11 +407,6 @@ export default function QuickChatPage() {
                                 </div>
                             ))
                         )}
-                        {busy && (
-                            <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                                <IconLoader2 size={14} className="animate-spin" /> Thinking…
-                            </div>
-                        )}
                     </div>
 
                     {chatError && (
@@ -366,22 +415,28 @@ export default function QuickChatPage() {
                         </div>
                     )}
 
-                    {/* Input */}
-                    <div className="mt-3 flex gap-2">
-                        <input
-                            type="text"
+                    <div className="mt-3 flex gap-2 items-end">
+                        <textarea
+                            ref={textareaRef}
+                            rows={1}
                             value={input}
                             onChange={(e) => setInput(e.target.value)}
                             onKeyDown={(e) => {
                                 if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); send(); }
                             }}
-                            placeholder="Ask a question…"
+                            placeholder="Ask a question · Enter to send, Shift+Enter for newline"
                             disabled={busy}
-                            className="flex-1 text-sm h-10 px-3 rounded-md border bg-background focus:outline-none focus:ring-2 focus:ring-violet-500/30 disabled:opacity-60"
+                            className="flex-1 text-sm px-3 py-2 min-h-10 rounded-md border bg-background focus:outline-none focus:ring-2 focus:ring-violet-500/30 disabled:opacity-60 resize-none"
                         />
-                        <Button size="sm" onClick={send} disabled={busy || !input.trim()} className="h-10">
-                            {busy ? <IconLoader2 size={14} className="animate-spin" /> : <IconSend size={14} />}
-                        </Button>
+                        {busy ? (
+                            <Button size="sm" variant="secondary" onClick={stop} className="h-10" title="Stop generating">
+                                <IconPlayerStop size={14} />
+                            </Button>
+                        ) : (
+                            <Button size="sm" onClick={send} disabled={!input.trim()} className="h-10">
+                                <IconSend size={14} />
+                            </Button>
+                        )}
                     </div>
                 </>
             )}
@@ -419,11 +474,7 @@ function UploadCard({
                 PDF, DOCX, TXT, or MD — up to 20 MB. Nothing is uploaded to your drive.
             </p>
             <div className="mt-4 flex items-center justify-center gap-2">
-                <Button
-                    size="sm"
-                    disabled={uploading}
-                    onClick={() => inputRef.current?.click()}
-                >
+                <Button size="sm" disabled={uploading} onClick={() => inputRef.current?.click()}>
                     {uploading ? (
                         <><IconLoader2 size={14} className="mr-1.5 animate-spin" /> Processing…</>
                     ) : "Choose file"}
@@ -436,7 +487,6 @@ function UploadCard({
                     onChange={(e) => {
                         const f = e.target.files?.[0];
                         if (f && !uploading) onPick(f);
-                        // Reset so picking the same file twice still fires.
                         if (e.target) e.target.value = "";
                     }}
                 />

@@ -18,7 +18,7 @@ export type Source = {
 export type Confidence = "high" | "medium" | "low" | "none";
 
 export type StreamEvent =
-    | { type: "ready"; prepared_now?: boolean }
+    | { type: "ready"; prepared_now?: boolean; redactions?: number }
     | { type: "prep"; rewritten_query?: string }
     | { type: "no_sources" }
     | { type: "delta"; text: string }

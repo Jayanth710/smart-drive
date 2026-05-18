@@ -214,6 +214,7 @@ interface UserData {
   firstName: string;
   lastName: string;
   phone?: string;
+  emailVerified?: boolean;
 }
 
 interface AuthState {
