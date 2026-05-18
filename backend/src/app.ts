@@ -3,12 +3,16 @@ import dotenv from 'dotenv';
 import cors from "cors";
 import cookieParser from "cookie-parser";
 dotenv.config();
+import { validateEnv } from "./config/validateEnv.js";
+validateEnv();
 import uploadRouter from "./routes/upload.js";
 import { setupPubSub } from "./utils/pubsub.js";
 import queryRouter from "./routes/query.js";
 import userRouter from "./routes/auth.js";
 import connectDB from "./db/mongo.js";
 import fileRouter from "./routes/file.js";
+import { requestContextMiddleware } from "./middleware/requestContext.js";
+import { csrfMiddleware } from "./middleware/csrf.js";
 
 const app = express();
 const PORT = process.env.PORT || 4000;
@@ -18,14 +22,18 @@ const allowedOrigins = [
     process.env.FRONT_END_URL
   ].filter(Boolean) as string[];
 
+app.use(requestContextMiddleware);
 app.use(express.json())
 app.use(cors({
     origin: allowedOrigins,
     credentials: true,
+    allowedHeaders: ['Content-Type', 'Authorization', 'X-CSRF-Token', 'X-Request-Id'],
+    exposedHeaders: ['X-Request-Id'],
 }))
 app.use(express.urlencoded({ extended: true }));
 
 app.use(cookieParser());
+app.use(csrfMiddleware);
 await connectDB()
 await setupPubSub();
 

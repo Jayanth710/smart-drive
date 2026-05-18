@@ -217,4 +217,61 @@ const deleteWeaviateUser = async (userId: string) => {
         return;
     }
 }
-export { queryWeaviate, getRecentUploads, deleteWeaviateFile, deleteWeaviateUser };
+export type FileEnrichment = {
+    summary?: string;
+    indexJson?: Record<string, unknown>;
+};
+
+const safeParseIndexJson = (raw: unknown): Record<string, unknown> | undefined => {
+    if (!raw || typeof raw !== 'string') return undefined;
+    try {
+        const parsed = JSON.parse(raw);
+        return typeof parsed === 'object' && parsed !== null ? parsed : undefined;
+    } catch {
+        return undefined;
+    }
+};
+
+const getWeaviateSummariesByFileIds = async (
+    userId: string,
+    fileIds: string[],
+): Promise<Map<string, FileEnrichment>> => {
+    const out = new Map<string, FileEnrichment>();
+    if (fileIds.length === 0) return out;
+
+    try {
+        const client = await getWeaviateClient();
+        if (!client) return out;
+
+        const collectionsToQuery = Object.values(collectionMap);
+        for (const collectionName of collectionsToQuery) {
+            const exists = await client.collections.exists(collectionName);
+            if (!exists) continue;
+
+            const collection = client.collections.get<SmartDriveSchema>(collectionName);
+            const filters = Filters.and(
+                collection.filter.byProperty('user_id').equal(userId),
+                collection.filter.byProperty('file_id').containsAny(fileIds),
+            );
+
+            const res = await collection.query.fetchObjects({
+                limit: fileIds.length,
+                filters,
+            });
+
+            for (const obj of res.objects) {
+                const props = obj.properties as { file_id?: string; summary?: string; index_json?: string };
+                if (!props.file_id || out.has(props.file_id)) continue;
+                out.set(props.file_id, {
+                    summary: props.summary,
+                    indexJson: safeParseIndexJson(props.index_json),
+                });
+            }
+        }
+    } catch (error) {
+        logger.error('Failed to fetch Weaviate enrichments:', error);
+    }
+    return out;
+};
+
+export { queryWeaviate, getRecentUploads, deleteWeaviateFile, deleteWeaviateUser, getWeaviateSummariesByFileIds };

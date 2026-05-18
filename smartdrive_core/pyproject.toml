@@ -8,7 +8,8 @@ dependencies = [
   "weaviate-client>=4.15.3",
   "google-genai",
   "pillow",
-  "json-repair"
+  "json-repair",
+  "pymongo>=4.6"
 ]
 
 [build-system]

@@ -1,182 +1,132 @@
-"use client"
-import { useRouter } from 'next/navigation'
-import React, { Dispatch, SetStateAction, useState } from 'react'
-import { Card, CardContent } from './ui/card'
-import { Label } from './ui/label'
-import { Input } from './ui/input'
-import { cn } from '@/lib/utils'
-import { Button } from './ui/button'
-import axios from 'axios'
-import apiClient from '@/lib/api'
-import { toast } from "react-toastify"
+"use client";
+import { useRouter } from "next/navigation";
+import React, { Dispatch, SetStateAction, useState } from "react";
+import { Label } from "./ui/label";
+import { Input } from "./ui/input";
+import { Button } from "./ui/button";
+import axios from "axios";
+import apiClient from "@/lib/api";
+import { toast } from "react-toastify";
+import { IconBrandGoogle, IconBrandApple, IconLoader2 } from "@tabler/icons-react";
 
 type LogInProps = {
-    className?: string
-    setIsLogin: Dispatch<SetStateAction<boolean>>
-    [key: string]: unknown
-}
+    setIsLogin: Dispatch<SetStateAction<boolean>>;
+};
 
-const LogIn: React.FC<LogInProps> = ({ className, setIsLogin, ...props }) => {
-    // const { login } = useAuth()
-    const [data, setData] = useState({
-        email: "",
-        password: ""
-    })
-    const router = useRouter()
+const LogIn: React.FC<LogInProps> = ({ setIsLogin }) => {
+    const [data, setData] = useState({ email: "", password: "" });
+    const [submitting, setSubmitting] = useState(false);
+    const router = useRouter();
 
-    const onChangeHandler = async (e: React.ChangeEvent<HTMLInputElement>) => {
-        setData({
-            ...data,
-            [e.target.name]: e.target.value
-        })
-    }
+    const onChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        setData({ ...data, [e.target.name]: e.target.value });
+    };
 
     const handleLogin = async (e: React.FormEvent) => {
-        e.preventDefault()
-
-        if(!data.email || !data.password){
-            toast.error(`Please enter details to logIn.`)
-            window.location.reload()
-            return
+        e.preventDefault();
+        if (!data.email || !data.password) {
+            toast.error("Please enter your email and password.");
+            return;
         }
-
+        setSubmitting(true);
         try {
-            const response = await apiClient.post(`/api/login`, data)
-            if (response.status === 200) {
+            const res = await apiClient.post("/api/login", data);
+            if (res.status === 200) {
                 await apiClient.get("/api/user");
-                console.log("Logged in successfully");
-                // const { accessToken } = response.data;
-                // login(accessToken)
-                toast.success("User succesfully Logged In.")
-                router.push("/dashboard")
+                toast.success("Welcome back!");
+                router.push("/dashboard");
             }
-
         } catch (error) {
-            toast.error('Issue while logging in. Try after some time.')
-            if (axios.isAxiosError(error) && error.response) {
-                if (error.response.status === 404) {
-                    setIsLogin(false); // show signup form
-                    setData({ email: "", password: "" });
-                } else {
-                    // setError("Invalid credentials");
-                }
+            if (axios.isAxiosError(error) && error.response?.status === 404) {
+                toast.info("No account found — please sign up.");
+                setIsLogin(false);
+            } else if (axios.isAxiosError(error) && error.response?.status === 401) {
+                toast.error("Incorrect password.");
+            } else {
+                toast.error("Could not sign you in.");
             }
-            else {
-                toast.error("Something went wrong");
-                console.error(error);
-            }
+        } finally {
+            setSubmitting(false);
         }
-        finally{
-            setData({ email: "", password: "" });
-        }
+    };
 
-    }
+    const onComingSoon = () => toast.info("Coming soon.");
 
-    const handleDevelop = () => {
-        toast.info('Feature under development.')
-    }
     return (
-        <div suppressHydrationWarning>
-            <div className={cn("flex flex-col gap-6", className)} {...props}>
-                <Card className="overflow-hidden">
-                    <CardContent className="p-2">
-                        <form className="p-6 md:p-8" method='post' onSubmit={handleLogin}>
-                            <div className="flex flex-col gap-6">
-                                <div className="flex flex-col items-center text-center">
-                                    <h1 className="text-2xl font-bold">Welcome back</h1>
-                                    <p className="text-balance text-muted-foreground">
-                                        Login to your Smart Drive account
-                                    </p>
-                                </div>
-                                <div className="grid gap-2">
-                                    <Label htmlFor="email">Email</Label>
-                                    <Input
-                                        id="email"
-                                        type="email"
-                                        placeholder="m@example.com"
-                                        onChange={onChangeHandler}
-                                        name="email"
-                                        value={data.email}
-                                        required
-                                    />
-                                </div>
-                                <div className="grid gap-2">
-                                    <div className="flex items-center">
-                                        <Label htmlFor="password">Password</Label>
-                                        <a
-                                            href="/forgot-password"
-                                            className="ml-auto text-sm underline-offset-2 hover:underline"
-                                        >
-                                            Forgot your password?
-                                        </a>
-                                    </div>
-                                    <Input
-                                        id="password"
-                                        placeholder="••••••••"
-                                        type="password"
-                                        onChange={onChangeHandler}
-                                        name="password"
-                                        value={data.password}
-                                        required
-                                    />
-                                </div>
-                                <button
-                                    className="group/btn relative block h-10 w-full rounded-md bg-gradient-to-br from-black to-neutral-600 font-medium text-white shadow-[0px_1px_0px_0px_#ffffff40_inset,0px_-1px_0px_0px_#ffffff40_inset] dark:bg-zinc-800 dark:from-zinc-900 dark:to-zinc-900 dark:shadow-[0px_1px_0px_0px_#27272a_inset,0px_-1px_0px_0px_#27272a_inset] cursor-pointer"
-                                    type="submit"
-                                    onClick={(e) => handleLogin(e)}
-                                >
-                                    Log In &rarr;
-                                </button>
+        <div className="space-y-6">
+            <div>
+                <h1 className="text-2xl font-semibold tracking-tight">Welcome back</h1>
+                <p className="text-sm text-muted-foreground mt-1">Sign in to your SmartDrive account.</p>
+            </div>
 
-                                <div className="relative text-center text-sm after:absolute after:inset-0 after:top-1/2 after:z-0 after:flex after:items-center after:border-t after:border-border">
-                                    <span className="relative z-10 bg-background px-2 text-muted-foreground">
-                                        Or continue with
-                                    </span>
-                                </div>
-                                <div className="grid grid-cols-2 gap-4">
-                                    <Button variant="outline" className="w-full cursor-pointer" onClick={handleDevelop}>
-                                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
-                                            <path
-                                                d="M12.152 6.896c-.948 0-2.415-1.078-3.96-1.04-2.04.027-3.91 1.183-4.961 3.014-2.117 3.675-.546 9.103 1.519 12.09 1.013 1.454 2.208 3.09 3.792 3.039 1.52-.065 2.09-.987 3.935-.987 1.831 0 2.35.987 3.96.948 1.637-.026 2.676-1.48 3.676-2.948 1.156-1.688 1.636-3.325 1.662-3.415-.039-.013-3.182-1.221-3.22-4.857-.026-3.04 2.48-4.494 2.597-4.559-1.429-2.09-3.623-2.324-4.39-2.376-2-.156-3.675 1.09-4.61 1.09zM15.53 3.83c.843-1.012 1.4-2.427 1.245-3.83-1.207.052-2.662.805-3.532 1.818-.78.896-1.454 2.338-1.273 3.714 1.338.104 2.715-.688 3.559-1.701"
-                                                fill="currentColor"
-                                            />
-                                        </svg>
-                                        <span className="sr-only">Login with Apple</span>
-                                    </Button>
-                                    <Button variant="outline" className="w-full cursor-pointer" onClick={handleDevelop}>
-                                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24">
-                                            <path
-                                                d="M12.48 10.92v3.28h7.84c-.24 1.84-.853 3.187-1.787 4.133-1.147 1.147-2.933 2.4-6.053 2.4-4.827 0-8.6-3.893-8.6-8.72s3.773-8.72 8.6-8.72c2.6 0 4.507 1.027 5.907 2.347l2.307-2.307C18.747 1.44 16.133 0 12.48 0 5.867 0 .307 5.387.307 12s5.56 12 12.173 12c3.573 0 6.267-1.173 8.373-3.36 2.16-2.16 2.84-5.213 2.84-7.667 0-.76-.053-1.467-.173-2.053H12.48z"
-                                                fill="currentColor"
-                                            />
-                                        </svg>
-                                        <span className="sr-only">Login with Google</span>
-                                    </Button>
-                                </div>
-                                <div className="text-center text-sm" onClick={() => setIsLogin(false)}>
-                                    Don&apos;t have an account?{" "}
-                                    <a href="#" className="underline underline-offset-4">
-                                        Sign up
-                                    </a>
-                                </div>
-                            </div>
-                        </form>
-                        {/* <div className="relative hidden bg-slate-500 md:block">
-            <img
-              src="/placeholder.svg"
-              alt="Image"
-              className="absolute inset-0 h-full w-full object-cover dark:brightness-[0.2] dark:grayscale"
-            />
-          </div> */}
-                    </CardContent>
-                </Card>
-                <div className="text-balance text-center text-xs text-muted-foreground [&_a]:underline [&_a]:underline-offset-4 hover:[&_a]:text-primary">
-                    By clicking continue, you agree to our <a href="#">Terms of Service</a>{" "}
-                    and <a href="#">Privacy Policy</a>.
+            <form onSubmit={handleLogin} className="space-y-4">
+                <div className="grid gap-1.5">
+                    <Label htmlFor="email">Email</Label>
+                    <Input
+                        id="email"
+                        type="email"
+                        placeholder="you@example.com"
+                        name="email"
+                        value={data.email}
+                        onChange={onChange}
+                        required
+                    />
+                </div>
+                <div className="grid gap-1.5">
+                    <div className="flex items-center justify-between">
+                        <Label htmlFor="password">Password</Label>
+                        <a href="/forgot-password" className="text-xs text-muted-foreground hover:text-foreground hover:underline">
+                            Forgot password?
+                        </a>
+                    </div>
+                    <Input
+                        id="password"
+                        type="password"
+                        placeholder="••••••••"
+                        name="password"
+                        value={data.password}
+                        onChange={onChange}
+                        required
+                    />
+                </div>
+
+                <button
+                    type="submit"
+                    disabled={submitting}
+                    className="group/btn relative flex h-10 w-full items-center justify-center rounded-md bg-gradient-to-br from-black to-neutral-600 font-medium text-white shadow-[0px_1px_0px_0px_#ffffff40_inset,0px_-1px_0px_0px_#ffffff40_inset] dark:bg-zinc-800 dark:from-zinc-900 dark:to-zinc-900 dark:shadow-[0px_1px_0px_0px_#27272a_inset,0px_-1px_0px_0px_#27272a_inset] disabled:opacity-60 disabled:cursor-not-allowed cursor-pointer"
+                >
+                    {submitting ? (
+                        <><IconLoader2 size={16} className="mr-2 animate-spin" /> Signing in…</>
+                    ) : <>Sign in &rarr;</>}
+                </button>
+            </form>
+
+            <div className="relative">
+                <div className="absolute inset-0 flex items-center">
+                    <span className="w-full border-t" />
+                </div>
+                <div className="relative flex justify-center text-xs">
+                    <span className="bg-background px-2 text-muted-foreground">or continue with</span>
                 </div>
             </div>
-        </div>
-    )
-}
 
-export default LogIn
+            <div className="grid grid-cols-2 gap-2">
+                <Button variant="outline" type="button" onClick={onComingSoon} className="h-9">
+                    <IconBrandGoogle size={16} className="mr-2" /> Google
+                </Button>
+                <Button variant="outline" type="button" onClick={onComingSoon} className="h-9">
+                    <IconBrandApple size={16} className="mr-2" /> Apple
+                </Button>
+            </div>
+
+            <p className="text-center text-sm text-muted-foreground">
+                Don&apos;t have an account?{" "}
+                <button onClick={() => setIsLogin(false)} className="font-medium text-foreground hover:underline">
+                    Sign up
+                </button>
+            </p>
+        </div>
+    );
+};
+
+export default LogIn;

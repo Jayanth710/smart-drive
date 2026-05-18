@@ -197,6 +197,16 @@
 import apiClient from "@/lib/api";
 import { usePathname, useRouter } from "next/navigation";
 import React, { createContext, useContext, useEffect, useState } from "react";
+import { toast } from "react-toastify";
+
+// Paths that don't require a session. The auth context must NOT bounce
+// unauthenticated users away from these — that's where they go to
+// authenticate or recover their account in the first place.
+const PUBLIC_PATHS = ["/", "/forgot-password", "/reset-password", "/verify-email"];
+const isPublicPath = (path: string | null | undefined): boolean => {
+  if (!path) return false;
+  return PUBLIC_PATHS.some((p) => path === p || path.startsWith(p + "/") || path.startsWith(p + "?"));
+};
 
 interface UserData {
   id: string;
@@ -210,19 +220,41 @@ interface AuthState {
   data: UserData | null;
   authReady: boolean;
   user: () => Promise<boolean>;
-  // login: (email: string, password: string) => Promise<void>;
+  login: (email: string, password: string) => Promise<void>;
   logout: () => Promise<void>;
 }
 
 const AuthContext = createContext<AuthState | undefined>(undefined);
-
 
 export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   const [data, setData] = useState<UserData | null>(null);
   const [authReady, setAuthReady] = useState(false);
 
   const router = useRouter();
+
   const pathname = usePathname();
+
+  // const logout = async () => {
+  //   try {
+  //     await apiClient.post("/api/logout");
+  //   } catch {
+  //     // ignore
+  //   }
+  //   finally {
+
+  //     // 1. Erase the data immediately
+  //     setData(null);
+  //     toast.success("Logged out successfully");
+
+  //     // 2. THE SNAPSHOT FIX: 
+  //     // Wait 100 milliseconds for React to actually erase the DOM and hit the 
+  //     // Global Firewall (returning null). THEN navigate. 
+  //     // This ensures Safari's memory snapshot is completely blank.
+  //     setTimeout(() => {
+  //       window.location.href = "/";
+  //     }, 100);
+  //   }
+  // };
 
   const logout = async () => {
     try {
@@ -231,13 +263,35 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       // ignore
     } finally {
       setData(null);
-      router.replace("/");
+      toast.success("Logged out successfully");
+
+      setTimeout(() => router.replace("/"), 500);
+
+      // 1) Replace current page (does not add history)
+      // window.location.replace("/");
+
+      // 2) After landing, push a state so Back stays on "/"
+      // (works across Safari/Chrome)
+      setTimeout(() => {
+        window.history.pushState(null, "", "/");
+      }, 0);
     }
   };
 
   const user = async (): Promise<boolean> => {
     try {
-      const res = await apiClient.get("/api/user");
+      // 1. CACHE BUSTER: The timestamp forces the browser to treat this as a brand new request every single time.
+      const timestamp = new Date().getTime();
+
+      const res = await apiClient.get(`/api/user?t=${timestamp}`, {
+        // 2. STRICT HEADERS: Tell the browser network layer to never save this response
+        headers: {
+          'Cache-Control': 'no-cache, no-store, must-revalidate',
+          'Pragma': 'no-cache',
+          'Expires': '0',
+        }
+      });
+
       if (res.status === 200 && res.data?.data) {
         setData(res.data.data);
         return true;
@@ -250,52 +304,49 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     }
   };
 
-  // const login = async (email: string, password: string) => {
-  //   await apiClient.post("/api/login", { email, password });
-  //   const ok = await user();
-  //   if (!ok) {
-  //       setData(null);
-  //       router.replace("/");
-  //   }
-  // };
+  const login = async (email: string, password: string) => {
+    // 1. Tell the backend to verify the user and set the secure cookie
+    await apiClient.post("/api/login", { email, password });
+
+    // 2. Immediately fetch the user's profile using the brand new cookie
+    const ok = await user();
+
+    // 3. (Inside the user() function) React updates the global `data` state!
+    if (!ok) {
+      setData(null);
+      toast.error("Login failed.");
+    }
+  };
 
   useEffect(() => {
-    if (pathname === "/") {
-      setData(null);
-      setAuthReady(true);
-      return;
-    }
-
     let isMounted = true;
 
     (async () => {
       const ok = await user();
-      
-      if (!isMounted) return;
 
-      if (!ok) {
-        // Only clear state and redirect. 
-        // Do NOT call the API logout or set authReady to true.
-        setData(null);
-        router.replace("/");
-      } else {
-        setAuthReady(true);
+      if (!isMounted) return;
+      setAuthReady(true);
+
+      if (!ok && !isPublicPath(pathname)) {
+        window.location.replace("/");
       }
     })();
 
     return () => {
       isMounted = false;
     };
-  }, [pathname]); 
+  }, [pathname]);
 
-  // BLOCK RENDERING: If not ready and not on the login page, don't render children.
-  // This prevents `fetchCollections` from firing its API calls during a redirect.
-  if (!authReady && pathname !== "/") {
-    return null; // Or return a <LoadingSpinner />
+  if (!authReady && !isPublicPath(pathname)) {
+    return null;
+  }
+
+  if (authReady && !data && !isPublicPath(pathname)) {
+    return null;
   }
 
   return (
-    <AuthContext.Provider value={{ data, authReady, user, logout }}>
+    <AuthContext.Provider value={{ data, authReady, user, login, logout }}>
       {children}
     </AuthContext.Provider>
   );

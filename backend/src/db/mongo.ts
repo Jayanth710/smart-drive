@@ -1,20 +1,20 @@
 import mongoose from 'mongoose';
 import logger from '../logger.js';
 
-const MONGO_URI = process.env.MONGO_URI! || ""
-
-if(!MONGO_URI){
-    logger.error("Error connecting to MongoDB. Check the URL.")
-}
+const MONGO_URI = process.env.MONGO_URI || "";
 
 const connectDB = async () => {
-    await mongoose.connect(MONGO_URI)
-    .then(()=>{
-        logger.info("DB Connected")
-    })
-    .catch(()=>{
-        logger.error("Error in connection")
-    })
-}
+    if (!MONGO_URI) {
+        logger.error("MONGO_URI is not set. Refusing to start.");
+        process.exit(1);
+    }
+    try {
+        await mongoose.connect(MONGO_URI);
+        logger.info("DB Connected");
+    } catch (error) {
+        logger.error("Failed to connect to MongoDB:", error);
+        process.exit(1);
+    }
+};
 
 export default connectDB;

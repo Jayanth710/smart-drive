@@ -1,9 +1,11 @@
 import json, json_repair
+import logging
 import os
 import re
-from venv import logger
 # from langchain_text_splitters import CharacterTextSplitter
 from google import genai
+
+logger = logging.getLogger(__name__)
 from google.genai import types
 from PIL import Image
 from dotenv import load_dotenv
@@ -93,12 +95,11 @@ def LLM_doc_summarizer(text: str):
         return user_summary, index_json, embedding
 
     except json.JSONDecodeError as e:
-        print(f"JSON Error: {e}")
-        # If this happens, it is 99% likely a token limit issue.
-        return "Error: Summary truncated.", {}, []
+        logger.error(f"JSON Error in LLM_doc_summarizer: {e}")
+        return "Error: Summary truncated.", {}, None
     except Exception as e:
-        print(f"General Error: {e}")
-        return "Error generating summary.", {}, []
+        logger.error(f"General Error in LLM_doc_summarizer: {e}", exc_info=True)
+        return "Error generating summary.", {}, None
 
 def LLM_media_summarizer(text: str):
     """Summarize a Image file using Gemini model."""
@@ -171,7 +172,11 @@ Present the final description as a single, well-structured concise paragraph."""
     return response.text, embedding
 
 def get_embedding(text):
-    """Generates an embedding for the given text using the Google Generative AI API."""
+    """Generates an embedding for the given text using the Google Generative AI API.
+
+    Returns None on failure so callers can skip indexing instead of polluting
+    Weaviate with zero vectors that become false-positive search matches.
+    """
     try:
         result = client.models.embed_content(
             model="gemini-embedding-001", # Newest standard embedding model
@@ -181,7 +186,5 @@ def get_embedding(text):
         )
         return result.embeddings[0].values
     except Exception as e:
-        # Log the error properly so you don't crash hard
-        print(f"Error generating embedding: {e}")
-        # Return a zero-vector or None to prevent downstream crashes
-        return [0.0] * 768
+        logger.error(f"Error generating embedding: {e}", exc_info=True)
+        return None

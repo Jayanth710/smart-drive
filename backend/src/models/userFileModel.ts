@@ -1,5 +1,7 @@
 import mongoose from "mongoose";
 
+export type ExtractionStatus = 'pending' | 'processing' | 'done' | 'failed';
+
 export interface UserFileType extends mongoose.Document {
     _id: mongoose.Types.ObjectId;
     userId: mongoose.Types.ObjectId;
@@ -7,6 +9,8 @@ export interface UserFileType extends mongoose.Document {
     gcsUrl: string;
     fileType: string;
     fileHash: string;
+    extractionStatus: ExtractionStatus;
+    extractionError?: string | null;
     createdAt: Date;
     updatedAt: Date;
 }
@@ -34,14 +38,23 @@ const userFileSchema = new mongoose.Schema(
         fileHash: {
             type: String,
             required: true,
+        },
+        extractionStatus: {
+            type: String,
+            enum: ['pending', 'processing', 'done', 'failed'],
+            default: 'pending',
             index: true,
-        }
+        },
+        extractionError: {
+            type: String,
+        },
     },
     {
         timestamps: true,
     }
 );
 
+userFileSchema.index({ userId: 1, fileHash: 1 }, { unique: true });
 userFileSchema.index({ userId: 1, fileName: 1 }, { unique: true });
 
 const UserFile = mongoose.model("UserFile", userFileSchema);

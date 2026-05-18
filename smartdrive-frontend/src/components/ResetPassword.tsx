@@ -1,122 +1,105 @@
 "use client";
-import React, { useState } from 'react';
-import { useRouter, useSearchParams } from 'next/navigation';
-import apiClient from '@/lib/api';
-import { toast } from 'react-toastify';
-import axios from 'axios';
-import { Label } from './ui/label';
-import { Input } from './ui/input';
-import { cn } from '@/lib/utils';
+import React, { useState } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
+import apiClient from "@/lib/api";
+import { toast } from "react-toastify";
+import axios from "axios";
+import { Label } from "./ui/label";
+import { Input } from "./ui/input";
+import Link from "next/link";
+import { IconArrowLeft, IconLoader2 } from "@tabler/icons-react";
 
 const ResetPasswordPage = () => {
     const searchParams = useSearchParams();
-    const [passwordData, setPasswordData] = useState({
-        password: "",
-        re_password: "",
-    })
-    const router = useRouter()
-    const token = searchParams.get('token');
-    // ... state for password, confirmPassword, message, error ...
+    const token = searchParams.get("token");
+    const [passwordData, setPasswordData] = useState({ password: "", re_password: "" });
+    const [submitting, setSubmitting] = useState(false);
+    const router = useRouter();
 
-    const onChangeHandler = (event: React.ChangeEvent<HTMLInputElement>) => {
-        setPasswordData({
-            ...passwordData,
-            [event.target.name]: event.target.value,
-
-        })
-    }
+    const onChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        setPasswordData({ ...passwordData, [e.target.name]: e.target.value });
+    };
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
-
-        try {
-            if (passwordData.password !== passwordData.re_password) {
-                toast.error("Password and re-password do not match.")
-                return
-            }
-
-            const payload = {
-                password: passwordData.password,
-                token: token,
-            };
-
-            const response = await apiClient.post(`/api/reset-password`, payload);
-            console.log(response.data.message)
-            if (response.status === 200) {
-                console.log('Password updated succesfull')
-                toast.success(`Password updation was succesfull.`)
-                router.push('/')
-            }
-
-        } catch (err: unknown) {
-            if (axios.isAxiosError(err) && err.response) {
-                console.error("Backend Error:", err.response.data.message);
-                toast.error(`Backend Error: ${err.response.data.message}`)
-            }
-            else {
-                toast.error("An unexpected error occurred. Please try again.");
-                console.error(err);
-
-            }
+        if (!token) {
+            toast.error("This reset link is invalid.");
+            return;
         }
-        finally {
-            setPasswordData({
-                password: "",
-                re_password: ""
+        if (passwordData.password !== passwordData.re_password) {
+            toast.error("Passwords don't match.");
+            return;
+        }
+        setSubmitting(true);
+        try {
+            const res = await apiClient.post("/api/reset-password", {
+                password: passwordData.password,
+                token,
             });
+            if (res.status === 200) {
+                toast.success("Password updated. Please sign in.");
+                router.push("/");
+            }
+        } catch (err) {
+            if (axios.isAxiosError(err) && err.response) {
+                toast.error(err.response.data?.message ?? "Could not reset password.");
+            } else {
+                toast.error("Something went wrong. Try again.");
+            }
+        } finally {
+            setSubmitting(false);
+            setPasswordData({ password: "", re_password: "" });
         }
     };
 
-    // ... component JSX ...
     return (
-        <form className="p-6 md:p-8" method='post' onSubmit={handleSubmit}>
-            <div className="flex flex-col gap-6">
-                <div className="flex flex-col items-center text-center">
-                    <h1 className="text-2xl font-bold">Welcome to Smart Drive</h1>
-                    <p className="text-balance text-muted-foreground">
-                        Enter your Smart Drive account email to get reset Link
-                    </p>
-                    <div className="grid gap-2 w-1/4 mt-15 mb-4">
-                        <LabelInputContainer className="mb-4">
-                            <Label htmlFor="password">Password</Label>
-                            <Input id="password" placeholder="••••••••" type="password" name="password" onChange={onChangeHandler} value={passwordData.password} />
-
-                        </LabelInputContainer>
-                        <LabelInputContainer className="mb-4">
-                            <Label htmlFor="repassword">Re-enter password</Label>
-                            <Input
-                                id="repassword"
-                                placeholder="••••••••"
-                                type="password"
-                                name="re_password"
-                                onChange={onChangeHandler}
-                                value={passwordData.re_password}
-                            />
-                        </LabelInputContainer>
-                    </div>
-                    <button
-                        className="group/btn relative block h-10 w-1/4 rounded-md bg-gradient-to-br from-black to-neutral-600 font-medium text-white shadow-[0px_1px_0px_0px_#ffffff40_inset,0px_-1px_0px_0px_#ffffff40_inset] dark:bg-zinc-800 dark:from-zinc-900 dark:to-zinc-900 dark:shadow-[0px_1px_0px_0px_#27272a_inset,0px_-1px_0px_0px_#27272a_inset] cursor-pointer"
-                        type="submit"
-                        onClick={(e) => handleSubmit(e)}
-                    >
-                        Reset Password &rarr;
-                    </button>
-                </div>
+        <div className="space-y-6">
+            <div>
+                <h1 className="text-2xl font-semibold tracking-tight">Set a new password</h1>
+                <p className="text-sm text-muted-foreground mt-1">
+                    Pick something strong — you&apos;ll use it to sign in.
+                </p>
             </div>
-        </form>
-    );
-};
 
-const LabelInputContainer = ({
-    children,
-    className,
-}: {
-    children: React.ReactNode;
-    className?: string;
-}) => {
-    return (
-        <div className={cn("flex w-full flex-col space-y-2", className)}>
-            {children}
+            <form onSubmit={handleSubmit} className="space-y-4">
+                <div className="grid gap-1.5">
+                    <Label htmlFor="password">New password</Label>
+                    <Input
+                        id="password"
+                        type="password"
+                        placeholder="••••••••"
+                        name="password"
+                        value={passwordData.password}
+                        onChange={onChange}
+                        required
+                    />
+                </div>
+                <div className="grid gap-1.5">
+                    <Label htmlFor="re_password">Confirm new password</Label>
+                    <Input
+                        id="re_password"
+                        type="password"
+                        placeholder="••••••••"
+                        name="re_password"
+                        value={passwordData.re_password}
+                        onChange={onChange}
+                        required
+                    />
+                </div>
+                <button
+                    type="submit"
+                    disabled={submitting}
+                    className="group/btn relative flex h-10 w-full items-center justify-center rounded-md bg-gradient-to-br from-black to-neutral-600 font-medium text-white shadow-[0px_1px_0px_0px_#ffffff40_inset,0px_-1px_0px_0px_#ffffff40_inset] dark:bg-zinc-800 dark:from-zinc-900 dark:to-zinc-900 dark:shadow-[0px_1px_0px_0px_#27272a_inset,0px_-1px_0px_0px_#27272a_inset] disabled:opacity-60 disabled:cursor-not-allowed cursor-pointer"
+                >
+                    {submitting ? (
+                        <><IconLoader2 size={16} className="mr-2 animate-spin" /> Updating…</>
+                    ) : <>Update password &rarr;</>}
+                </button>
+            </form>
+
+            <Link href="/" className="inline-flex items-center text-sm text-muted-foreground hover:text-foreground">
+                <IconArrowLeft size={14} className="mr-1.5" /> Back to sign in
+            </Link>
         </div>
     );
 };

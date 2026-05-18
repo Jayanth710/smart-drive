@@ -11,20 +11,28 @@ logger = logging.getLogger(__name__)
 
 model_size = "small"
 
+_whisper_model: WhisperModel | None = None
+
+
+def _get_whisper_model() -> WhisperModel:
+    """Lazily load the Whisper model once per process.
+
+    Loading is expensive (multi-GB weights, ~10–30s), so reloading on every
+    Pub/Sub message would dominate worker latency.
+    """
+    global _whisper_model
+    if _whisper_model is None:
+        logger.info(f"Loading Whisper model '{model_size}' (one-time per worker)")
+        _whisper_model = WhisperModel(model_size, device="cpu", compute_type="int8")
+    return _whisper_model
+
+
 def audio_extractor(media_path: str):
-
-    model = WhisperModel(model_size, device="cpu", compute_type="int8")
-
-    # or run on GPU with INT8
-    # model = WhisperModel(model_size, device="cuda", compute_type="int8_float16")
-    # or run on CPU with INT8
-    # model = WhisperModel(model_size, device="cpu", compute_type="int8")
+    model = _get_whisper_model()
 
     segments, info = model.transcribe(media_path, beam_size=5)
 
-    print("Detected language '%s' with probability %f" % (info.language, info.language_probability))
-
-    segments = list(segments)
+    logger.info(f"Detected language '{info.language}' with probability {info.language_probability:.4f}")
 
     text_chunks = " ".join(segment.text.strip() for segment in segments)
 
@@ -70,8 +78,11 @@ def video_to_audio(video_path: str):
 
         result = subprocess.run(command, check=True, capture_output=True, text=True)
 
-        logger.info("ffmpeg stdout: " + result.stdout)
-        logger.error("ffmpeg stderr: " + result.stderr)
+        if result.stdout:
+            logger.debug("ffmpeg stdout: " + result.stdout)
+        if result.stderr:
+            # ffmpeg writes progress/info to stderr by default on success
+            logger.debug("ffmpeg stderr: " + result.stderr)
 
         logger.info(f"Audio successfully extracted to: {output_audio_path}")
         return output_audio_path

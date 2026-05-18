@@ -1,56 +1,75 @@
-"use client"
-// import { FileCard } from '@/components/FileCard'
-import { FileListWithDrawer } from '@/components/FileListWithDrawer'
-import RecentUploads, { UploadItem } from '@/components/RecentUploads'
-import SearchBar from '@/components/Search'
-import { HoverEffect } from '@/components/ui/card-hover-effect'
-import { useAuth } from '@/context/AuthContext'
-import { useFetchCollections } from '@/lib/fetchCollections'
-import React, { useState } from 'react'
+"use client";
+import { FileListWithDrawer } from "@/components/FileListWithDrawer";
+import { UploadItem } from "@/components/FileListWithDrawer";
+import SearchBar from "@/components/Search";
+import UploadFile from "@/components/UploadFile";
+import { Button } from "@/components/ui/button";
+import { useAuth } from "@/context/AuthContext";
+import { useFetchCollections } from "@/lib/fetchCollections";
+import { IconX } from "@tabler/icons-react";
+import React, { useState } from "react";
 
 const DocumentsPage = () => {
-
-    const { projects, error, refreshData } = useFetchCollections();
+    const { documentsData, isLoading, error, refreshData } = useFetchCollections();
     const [searchResults, setSearchResults] = useState<UploadItem[]>([]);
-    const {authReady, data} = useAuth();
+    const [searchQuery, setSearchQuery] = useState("");
+    const { authReady, data } = useAuth();
 
     const handleAction = async () => {
-        if (!authReady || !data) return;         // auth still loading or not authenticated, do nothing
-
+        if (!authReady || !data) return;
         refreshData();
-    }
+    };
 
     if (error) {
         return (
             <div className="flex justify-center items-center flex-1 p-4 text-red-500">
-                <p className="text-lg">Error: Could not load documents files.</p>
+                <p className="text-lg">Error: Could not load documents.</p>
             </div>
         );
     }
 
-    const documentsInfo = projects.documents;
+    const inSearch = searchQuery.trim().length > 0;
+    const clearSearch = () => { setSearchResults([]); setSearchQuery(""); };
 
     return (
-        <div className="flex flex-col flex-1 p-2 overflow-y-auto">
-            <SearchBar page={documentsInfo.title} onSearchResults={setSearchResults} />
+        <div className="flex flex-col gap-6 p-2">
+            <div className="flex items-start justify-between gap-4">
+                <div>
+                    <h1 className="text-2xl font-semibold tracking-tight">Documents</h1>
+                    <p className="text-sm text-muted-foreground mt-0.5">
+                        Every PDF, doc, and text file you&apos;ve indexed.
+                    </p>
+                </div>
+            </div>
 
-            {searchResults.length > 0 ? (
-                <div className="w-full max-w-5xl mt-4">
-                    <h3 className="text-lg font-semibold mb-2">Results:</h3>
-                    <FileListWithDrawer files={searchResults} onRefresh={handleAction} />
-                    {/* {searchResults.map((file) => (
-                        <FileCard key={file.file_id} file={file} onAction={handleAction} />
-                    ))} */}
-                </div>
-            ) : (
-                <div className="mt-2 flex-1">
-                    <div className="text-lg font-bold">Your Files Information</div>
-                    <HoverEffect items={[documentsInfo]} />
-                    <RecentUploads type="documents" />
-                </div>
-            )}
+            <div className="max-w-2xl w-full">
+                <SearchBar
+                    page="Documents"
+                    onSearchResults={setSearchResults}
+                    onQueryChange={setSearchQuery}
+                />
+            </div>
+
+            <FileListWithDrawer
+                files={inSearch ? searchResults : (documentsData || [])}
+                onRefresh={handleAction}
+                isLoading={isLoading}
+                hideTypeFilter
+                header={inSearch ? (
+                    <div className="flex items-center justify-between gap-3 rounded-xl border bg-muted/30 px-4 py-2.5">
+                        <div className="text-sm">
+                            <strong>{searchResults.length}</strong> result{searchResults.length === 1 ? "" : "s"} for{" "}
+                            <span className="font-medium">&ldquo;{searchQuery}&rdquo;</span>
+                        </div>
+                        <Button size="sm" variant="ghost" onClick={clearSearch}>
+                            <IconX size={14} className="mr-1.5" /> Clear
+                        </Button>
+                    </div>
+                ) : undefined}
+                headerAction={<UploadFile compact onUploaded={handleAction} />}
+            />
         </div>
     );
-}
+};
 
 export default DocumentsPage;
