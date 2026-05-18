@@ -44,8 +44,10 @@ def _embed_raw(texts: list[str]) -> list[list[float] | None]:
     result = client.models.embed_content(
         model=os.getenv("EMBEDDING_MODEL", "gemini-embedding-001"),
         contents=texts,
-        config=types.EmbedContentConfig(task_type="RETRIEVAL_DOCUMENT"),
-        output_dimensionality=768,
+        config=types.EmbedContentConfig(
+            task_type="RETRIEVAL_DOCUMENT",
+            output_dimensionality=768,
+        ),
     )
     vectors: list[list[float] | None] = [e.values for e in result.embeddings]
     while len(vectors) < len(texts):
