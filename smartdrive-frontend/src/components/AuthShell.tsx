@@ -10,7 +10,7 @@ import { IconSparkles, IconSearch, IconBolt } from "@tabler/icons-react";
  */
 export function AuthShell({ children }: { children: React.ReactNode }) {
     return (
-        <div className="min-h-screen grid grid-cols-1 lg:grid-cols-2 bg-background text-foreground">
+        <div className="min-h-[100dvh] grid grid-cols-1 lg:grid-cols-2 bg-background text-foreground">
             {/* Brand panel — quiet, muted, dark-mode friendly */}
             <div className="relative hidden lg:flex flex-col justify-between p-12 border-r bg-muted/30">
                 <Link href="/" className="flex items-center gap-2 w-fit">

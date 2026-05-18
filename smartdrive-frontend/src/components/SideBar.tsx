@@ -68,7 +68,7 @@ const SideBar = ({ children }: SideBarProps) => {
 
     return (
         <div className={cn(
-            "mx-auto flex w-full max-w-full flex-1 flex-col md:flex-row h-screen overflow-hidden bg-background text-foreground"
+            "mx-auto flex w-full max-w-full flex-1 flex-col md:flex-row h-[100dvh] overflow-hidden bg-background text-foreground"
         )}>
             <Sidebar open={open} setOpen={setOpen}>
                 <SidebarBody className="flex flex-col h-full overflow-y-auto overflow-x-hidden">

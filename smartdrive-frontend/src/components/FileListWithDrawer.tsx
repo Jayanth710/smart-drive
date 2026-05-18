@@ -1035,7 +1035,7 @@ export function FileListWithDrawer({
                             placeholder="Filter by name"
                             value={search}
                             onChange={(e) => setSearch(e.target.value)}
-                            className="text-sm h-8 pl-8 pr-7 rounded-md border bg-background w-full sm:w-[180px] focus:outline-none focus:ring-2 focus:ring-violet-500/30"
+                            className="text-base sm:text-sm h-9 sm:h-8 pl-8 pr-7 rounded-md border bg-background w-full sm:w-[180px] focus:outline-none focus:ring-2 focus:ring-violet-500/30"
                         />
                         {search && (
                             <button
@@ -1264,7 +1264,7 @@ export function FileListWithDrawer({
                     {!selectedFile ? (
                         <div className="mt-6 text-sm text-muted-foreground">Select a file to view details.</div>
                     ) : (
-                        <div className="p-2 sm:max-h-[80vh] overflow-auto">
+                        <div className="flex-1 min-h-0 overflow-y-auto px-4 pb-6">
                             {/* Primary actions */}
                             <div className="flex gap-2 flex-wrap">
                                 <Button onClick={() => handleView(selectedFile)}>
