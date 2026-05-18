@@ -54,9 +54,6 @@ export type SearchResult = FusedHit & {
     [key: string]: unknown;
 };
 
-type SummaryCollections = Record<string, string>;
-type ChunkCollections = Record<string, string>;
-
 // ---------- 1. Query analyzer ----------
 
 const STOPWORDS = new Set([
