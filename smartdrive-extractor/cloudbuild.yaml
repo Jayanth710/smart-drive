@@ -60,7 +60,7 @@ steps:
       - '--memory=4Gi'
       - '--cpu=2'
       - '--timeout=3600'
-      - '--set-secrets=GOOGLE_API_KEY=GOOGLE_API_KEY:latest,WEAVIATE_API_KEY=WEAVIATE_API_KEY:latest,WEAVIATE_URL=WEAVIATE_URL:latest,GCP_PROJECT_ID=GCP_PROJECT_ID:latest,PUBSUB_DATA_SUBSCRIPTION_ID=PUBSUB_DATA_SUBSCRIPTION_ID:latest,HF_TOKEN=HF_TOKEN:latest,LLM_MODEL=LLM_MODEL:latest'
+      - '--set-secrets=GOOGLE_API_KEY=GOOGLE_API_KEY:latest,WEAVIATE_API_KEY=WEAVIATE_API_KEY:latest,WEAVIATE_URL=WEAVIATE_URL:latest,GCP_PROJECT_ID=GCP_PROJECT_ID:latest,PUBSUB_DATA_SUBSCRIPTION_ID=PUBSUB_DATA_SUBSCRIPTION_ID:latest,HF_TOKEN=HF_TOKEN:latest,LLM_MODEL=LLM_MODEL:latest,MONGO_URI=MONGO_URI:latest'
 
 # This block automatically handles the push to Artifact Registry
 images:
