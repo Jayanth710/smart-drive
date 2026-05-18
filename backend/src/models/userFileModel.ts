@@ -10,7 +10,7 @@ export interface UserFileType extends mongoose.Document {
     fileType: string;
     fileHash: string;
     extractionStatus: ExtractionStatus;
-    extractionError?: string;
+    extractionError?: string | null;
     createdAt: Date;
     updatedAt: Date;
 }
