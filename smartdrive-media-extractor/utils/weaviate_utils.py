@@ -19,6 +19,9 @@ MEDIA_PROPS = [
     wvc.config.Property(name="filetype", data_type=wvc.config.DataType.TEXT),
     wvc.config.Property(name="created_at", data_type=wvc.config.DataType.DATE, index_filterable=True),
     wvc.config.Property(name="chunk_count", data_type=wvc.config.DataType.INT),
+    # Private media files were never transcribed or summarized — only the
+    # filename is meaningfully indexed. Audio bytes never reach an LLM.
+    wvc.config.Property(name="is_private", data_type=wvc.config.DataType.BOOL, index_filterable=True),
 ]
 
 CHUNK_PROPS = [
@@ -35,6 +38,28 @@ CHUNK_PROPS = [
 def init_schema():
     ws.ensure_collection(MEDIA_COLLECTION, MEDIA_PROPS)
     ws.ensure_collection(MEDIA_CHUNK_COLLECTION, CHUNK_PROPS)
+
+
+_PRIVATE_PLACEHOLDER_SUMMARY = "Private media — content not indexed."
+_PRIVATE_ZERO_VECTOR_DIM = 768  # match gemini-embedding-001 output dim
+
+
+def save_media_private(data: dict) -> dict:
+    """Write a minimal filename-only stub for a private media file. The audio
+    is never transcribed and never sent to any LLM."""
+    init_schema()
+    props = {
+        "filename": data.get("fileName"),
+        "file_id": str(data.get("_id")),
+        "user_id": data.get("userId"),
+        "summary": _PRIVATE_PLACEHOLDER_SUMMARY,
+        "raw_text": "",
+        "filetype": data.get("fileType"),
+        "created_at": data.get("uploadedAt"),
+        "chunk_count": 0,
+        "is_private": True,
+    }
+    return ws.upload(MEDIA_COLLECTION, props, [0.0] * _PRIVATE_ZERO_VECTOR_DIM)
 
 
 def save_media(data: dict, summary: str, embedding, raw_text: str = "", chunk_count: int = 0) -> dict:

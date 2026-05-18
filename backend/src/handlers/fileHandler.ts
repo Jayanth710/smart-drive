@@ -239,6 +239,13 @@ const prepareChat = async (req: AuthenticatedRequest, res: Response): Promise<vo
         return;
     }
     try {
+        const file = await UserFile.findById(fileId);
+        if (file && file.userId.toString() === userId && file.isPrivate) {
+            res.status(403).json({
+                message: 'Chat is disabled for private files. Toggle privacy off to enable AI features.',
+            });
+            return;
+        }
         const result = await prepareFileForChat(userId, fileId);
         if (!result.ready) {
             res.status(409).json({ message: result.reason });
@@ -248,6 +255,55 @@ const prepareChat = async (req: AuthenticatedRequest, res: Response): Promise<vo
     } catch (err) {
         logger.error(`prepareChat failed for fileId=${fileId}:`, err);
         res.status(500).json({ message: 'Could not prepare chat.' });
+    }
+};
+
+const togglePrivacy = async (req: AuthenticatedRequest, res: Response): Promise<void> => {
+    const userId = req.user?._id.toString();
+    const { fileId } = req.params;
+    const { isPrivate } = req.body as { isPrivate?: boolean };
+
+    if (!userId || !fileId) {
+        res.status(400).json({ message: 'Missing user or file id.' });
+        return;
+    }
+    if (typeof isPrivate !== 'boolean') {
+        res.status(400).json({ message: 'isPrivate (boolean) is required.' });
+        return;
+    }
+
+    try {
+        const file = await UserFile.findById(fileId);
+        if (!file || file.userId.toString() !== userId) {
+            res.status(403).json({ message: 'Forbidden.' });
+            return;
+        }
+        if (file.isPrivate === isPrivate) {
+            res.status(200).json({ isPrivate, changed: false });
+            return;
+        }
+
+        // Wipe existing index rows + any cached chunks, then re-queue extraction
+        // so the worker re-runs with the new privacy mode (skips LLM if private).
+        const summaryCol = file.fileType?.startsWith('image/')
+            ? 'SmartDriveImages'
+            : file.fileType?.startsWith('video/') || file.fileType?.startsWith('audio/')
+                ? 'SmartDriveMedia'
+                : 'SmartDriveDocuments';
+        await deleteWeaviateFile(userId, fileId, summaryCol);
+        await wipeChunksForFile(userId, fileId);
+
+        file.isPrivate = isPrivate;
+        file.extractionStatus = 'pending';
+        file.chatReady = false;
+        await file.save();
+
+        await publishFileMetadata(file);
+
+        res.status(200).json({ isPrivate, changed: true });
+    } catch (err) {
+        logger.error(`togglePrivacy failed for fileId=${fileId}:`, err);
+        res.status(500).json({ message: 'Could not update privacy.' });
     }
 };
 
@@ -277,6 +333,10 @@ const chatWithFile = async (req: AuthenticatedRequest, res: Response): Promise<v
         const fileRecord = await UserFile.findById(fileId);
         if (!fileRecord || fileRecord.userId.toString() !== userId) {
             res.status(403).json({ message: 'Forbidden: You do not have access to this file.' });
+            return;
+        }
+        if (fileRecord.isPrivate) {
+            res.status(403).json({ message: 'Chat is disabled for private files.' });
             return;
         }
         if (fileRecord.extractionStatus !== 'done') {
@@ -355,6 +415,10 @@ const chatWithFileStream = async (req: AuthenticatedRequest, res: Response): Pro
         const fileRecord = await UserFile.findById(fileId);
         if (!fileRecord || fileRecord.userId.toString() !== userId) {
             res.status(403).json({ message: 'Forbidden.' });
+            return;
+        }
+        if (fileRecord.isPrivate) {
+            res.status(403).json({ message: 'Chat is disabled for private files.' });
             return;
         }
         if (fileRecord.extractionStatus !== 'done') {
@@ -444,5 +508,6 @@ export {
     chatWithFileStream,
     prepareChat,
     getFileText,
+    togglePrivacy,
 }
 

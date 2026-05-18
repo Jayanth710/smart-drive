@@ -88,6 +88,7 @@ export const publishFileMetadata = async (fileInfo: UserFileType): Promise<strin
         fileType: fileInfo.fileType,
         gcsUrl: fileInfo.gcsUrl,
         uploadedAt: new Date().toISOString(),
+        isPrivate: !!fileInfo.isPrivate,
     };
 
     logger.info(`Publishing message for fileId=${messagePayload._id} to topic '${topicNameToSend}'`);

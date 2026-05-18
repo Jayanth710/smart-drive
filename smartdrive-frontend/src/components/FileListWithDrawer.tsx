@@ -27,6 +27,8 @@ import {
     IconSearch,
     IconArrowsSort,
     IconX,
+    IconLock,
+    IconLockOpen,
 } from "@tabler/icons-react";
 
 import { Button } from "./ui/button";
@@ -77,6 +79,7 @@ export interface UploadItem {
     extraction_status?: ExtractionStatus;
     extraction_error?: string;
     index_json?: IndexJson;
+    is_private?: boolean;
 
     /** Set by the search endpoint: the chunk text that scored highest against
      *  the user's query. Surfaced on the card so users know *why* a file matched. */
@@ -291,6 +294,7 @@ function FileCard({
     onDeleteRequest,
     onExtract,
     onToggleSelect,
+    onTogglePrivacy,
 }: {
     file: UploadItem;
     busyAction: Action;
@@ -302,6 +306,7 @@ function FileCard({
     onDeleteRequest: () => void;
     onExtract: () => void;
     onToggleSelect: () => void;
+    onTogglePrivacy: () => void;
 }) {
     const accent = useMemo(() => typeAccent(file.filetype), [file.filetype]);
     const reduce = useReducedMotion();
@@ -505,8 +510,16 @@ function FileCard({
                         so we don't repeat the icon down here. Filename clamps to 2 lines. */}
                     <div className="flex items-start gap-3">
                         <div className="min-w-0 flex-1">
-                            <div className="font-semibold leading-tight text-[15px] line-clamp-2 break-words" title={file.filename}>
-                                {file.filename}
+                            <div className="font-semibold leading-tight text-[15px] line-clamp-2 break-words flex items-start gap-1.5" title={file.filename}>
+                                {file.is_private && (
+                                    <span
+                                        className="shrink-0 inline-flex items-center gap-0.5 mt-0.5 text-[10px] font-medium uppercase tracking-wider px-1.5 py-0.5 rounded bg-emerald-500/15 text-emerald-700 dark:text-emerald-300"
+                                        title="Private — contents are not sent to any AI"
+                                    >
+                                        <IconLock size={10} /> Private
+                                    </span>
+                                )}
+                                <span className="min-w-0">{file.filename}</span>
                             </div>
                             <div className="mt-1 text-[11px] uppercase tracking-wide text-muted-foreground">
                                 {fileTypeLabel(file.filetype)} · {formatRelative(file.created_at)}
@@ -549,6 +562,13 @@ function FileCard({
                                 <DropdownMenuItem onClick={onExtract} disabled={status === "processing"}>
                                     <IconRefresh size={14} className="mr-2" />
                                     {status === "failed" ? "Retry extraction" : "Re-run extraction"}
+                                </DropdownMenuItem>
+                                <DropdownMenuItem onClick={onTogglePrivacy} disabled={status === "processing"}>
+                                    {file.is_private ? (
+                                        <><IconLockOpen size={14} className="mr-2" /> Enable AI features</>
+                                    ) : (
+                                        <><IconLock size={14} className="mr-2" /> Mark as private</>
+                                    )}
                                 </DropdownMenuItem>
                                 <DropdownMenuSeparator />
                                 <DropdownMenuItem onClick={onDeleteRequest} className="text-red-600 focus:text-red-600">
@@ -887,6 +907,22 @@ export function FileListWithDrawer({
         onRefresh();
     }, [bulkSelected, onRefresh]);
 
+    const handleTogglePrivacy = useCallback(async (file: UploadItem) => {
+        const nextPrivate = !file.is_private;
+        const verb = nextPrivate ? "Mark as private" : "Enable AI features";
+        const detail = nextPrivate
+            ? "This will remove the AI summary and disable chat for this file. The file itself stays uploaded."
+            : "This will re-extract the file and send its contents to the AI for summarization and indexing.";
+        if (!window.confirm(`${verb}?\n\n${detail}\n\nContinue?`)) return;
+        try {
+            await apiClient.patch(`/file/${file.file_id}/privacy`, { isPrivate: nextPrivate });
+            toast.success(nextPrivate ? "Marked as private." : "AI features enabled. Re-extracting…");
+            onRefresh();
+        } catch (err) {
+            toast.error(`Could not update privacy: ${(err as Error).message || "unknown error"}`);
+        }
+    }, [onRefresh]);
+
     const handleRetryAllFailed = useCallback(async () => {
         const failedIds = files
             .filter((f) => (f.extraction_status ?? "done") === "failed")
@@ -1156,6 +1192,7 @@ export function FileListWithDrawer({
                             onDownload={() => handleDownload(file)}
                             onExtract={() => handleExtract(file)}
                             onToggleSelect={() => toggleSelect(file.file_id)}
+                            onTogglePrivacy={() => handleTogglePrivacy(file)}
                             onDeleteRequest={() => {
                                 setSelectedId(file.file_id);
                                 setConfirmDeleteOpen(true);

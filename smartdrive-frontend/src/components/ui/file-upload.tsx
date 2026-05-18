@@ -32,8 +32,10 @@ const secondaryVariant = {
 
 export const FileUpload = ({
   onChange,
+  isPrivate = false,
 }: {
   onChange?: (files: File[]) => void;
+  isPrivate?: boolean;
 }) => {
   const [files, setFiles] = useState<File[]>([]);
   const [loading, setLoading] = useState(false);
@@ -111,6 +113,7 @@ export const FileUpload = ({
     }
 
     formData.append("fileHash", hash);
+    if (isPrivate) formData.append("isPrivate", "true");
 
     try {
       const res = await apiClient.post("/upload", formData, {

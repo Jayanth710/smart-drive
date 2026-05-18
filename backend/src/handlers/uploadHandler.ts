@@ -33,6 +33,9 @@ const handleFileUpload = async (req: AuthenticatedRequest, res: Response): Promi
     const file = (req.file as Express.Multer.File);
     const fileName = `${file.originalname.replace(/\s+/g, '_')}`;
     const { fileHash } = req.body;
+    // Privacy flag from the upload form. When true, the worker will skip all
+    // LLM calls and write only filename/metadata to the index.
+    const isPrivate = req.body?.isPrivate === 'true' || req.body?.isPrivate === true;
 
     if (!file) {
       logger.error('No file was included in the request.');
@@ -71,6 +74,7 @@ const handleFileUpload = async (req: AuthenticatedRequest, res: Response): Promi
         fileType: file.mimetype,
         fileHash: fileHash,
         extractionStatus: 'pending',
+        isPrivate,
       });
     } catch (err: unknown) {
       // E11000 = duplicate key. The unique index on (userId, fileHash)
@@ -157,6 +161,7 @@ const getUploads = async (req: AuthenticatedRequest, res: Response): Promise<voi
         extraction_error: f.extractionError,
         summary: enrichment?.summary,
         index_json: enrichment?.indexJson,
+        is_private: !!f.isPrivate,
       };
     });
 

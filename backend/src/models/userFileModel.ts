@@ -14,6 +14,10 @@ export interface UserFileType extends mongoose.Document {
     /** True once per-chunk vectors have been computed and stored in Weaviate.
      *  Lazy: only flipped when a user starts a chat with the file. */
     chatReady?: boolean;
+    /** When true, the worker skips all LLM calls. No summary, no entity extraction,
+     *  no body embedding, no chunks. Only filename + metadata are indexed so the
+     *  user can still find the file by name. Chat is disabled for private files. */
+    isPrivate?: boolean;
     createdAt: Date;
     updatedAt: Date;
 }
@@ -54,6 +58,11 @@ const userFileSchema = new mongoose.Schema(
         chatReady: {
             type: Boolean,
             default: false,
+        },
+        isPrivate: {
+            type: Boolean,
+            default: false,
+            index: true,
         },
     },
     {
