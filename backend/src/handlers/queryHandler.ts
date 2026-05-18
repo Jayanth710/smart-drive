@@ -14,10 +14,14 @@ const queryHandler = async (req: AuthenticatedRequest, res: Response): Promise<v
 
     try {
         const userId = req.user?._id.toString();
-        logger.info(`${userId} ${userQuery} ${queryCollection}`)
-        const response = await queryWeaviate(userId!, userQuery as string, queryCollection as string)
+        if (!userId) {
+            res.status(401).json({ error: 'Not authorized.' });
+            return;
+        }
+        logger.info(`Search by ${userId}`);
+        const response = await queryWeaviate(userId, userQuery as string, queryCollection as string);
         res.status(200).json(response);
-        return
+        return;
     }
     catch (error) {
         logger.error('An error occurred during the search operation:', error);

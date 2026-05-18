@@ -1,13 +1,12 @@
-"use client"
-import ForgotPasswordForm from '@/components/ForgotPasswordForm'
-import React from 'react'
+"use client";
+import ForgotPasswordForm from "@/components/ForgotPasswordForm";
+import { AuthShell } from "@/components/AuthShell";
+import React from "react";
 
-const page = () => {
-  return (
-    <div>
-      <ForgotPasswordForm />
-    </div>
-  )
-}
+const Page = () => (
+    <AuthShell>
+        <ForgotPasswordForm />
+    </AuthShell>
+);
 
-export default page
+export default Page;

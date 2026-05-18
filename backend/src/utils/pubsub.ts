@@ -69,36 +69,32 @@ export const setupPubSub = async () => {
     logger.info("Pub/Sub setup complete.");
 };
 
-export const publishFileMetadata = async (fileInfo: UserFileType) => {
-    try {
-        let topicNameToSend: string;
-        const fileType = fileInfo.fileType;
+export const publishFileMetadata = async (fileInfo: UserFileType): Promise<string> => {
+    let topicNameToSend: string;
+    const fileType = fileInfo.fileType;
 
-        // if (fileType.startsWith('image/')) {
-        //     topicNameToSend = pubsubConfig.images.topic;
-        // } else 
-        if (fileType.startsWith('video/') || fileType.startsWith('audio/')) {
-            topicNameToSend = pubsubConfig.media.topic;
-        } else {
-            topicNameToSend = pubsubConfig.documents.topic;
-        }
-
-        const topic = pubsub.topic(topicNameToSend);
-
-        const messagePayload = {
-            _id: fileInfo._id.toString(),
-            userId: fileInfo.userId.toString(),
-            fileName: fileInfo.fileName,
-            fileType: fileInfo.fileType,
-            gcsUrl: fileInfo.gcsUrl,
-            uploadedAt: new Date().toISOString(),
-        };
-
-        logger.info('Publishing message:', messagePayload);
-
-        const messageId = await topic.publishMessage({ json: messagePayload });
-        logger.info(`📤 Published message for '${fileInfo.fileName}' to topic '${topicNameToSend}' (ID: ${messageId})`);
-    } catch (err: unknown) {
-        logger.error('❌ Failed to publish message:', err);
+    if (fileType.startsWith('video/') || fileType.startsWith('audio/')) {
+        topicNameToSend = pubsubConfig.media.topic;
+    } else {
+        topicNameToSend = pubsubConfig.documents.topic;
     }
+
+    const topic = pubsub.topic(topicNameToSend);
+
+    const messagePayload = {
+        _id: fileInfo._id.toString(),
+        userId: fileInfo.userId.toString(),
+        fileName: fileInfo.fileName,
+        fileType: fileInfo.fileType,
+        gcsUrl: fileInfo.gcsUrl,
+        uploadedAt: new Date().toISOString(),
+    };
+
+    logger.info(`Publishing message for fileId=${messagePayload._id} to topic '${topicNameToSend}'`);
+
+    // Let the caller decide how to react to publish failures — they need to
+    // know so they can roll the UserFile back to a "failed" status.
+    const messageId = await topic.publishMessage({ json: messagePayload });
+    logger.info(`Published fileId=${messagePayload._id} (msgId=${messageId})`);
+    return messageId;
 };

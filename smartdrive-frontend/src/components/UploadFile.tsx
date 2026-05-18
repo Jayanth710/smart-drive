@@ -10,8 +10,15 @@ import {
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { FileUpload } from "@/components/ui/file-upload";
+import { IconCloudUpload } from "@tabler/icons-react";
 
-export default function UploadFile() {
+export default function UploadFile({
+    compact = false,
+    onUploaded,
+}: {
+    compact?: boolean;
+    onUploaded?: () => void;
+}) {
     const [uploadSuccess, setUploadSuccess] = useState(false);
     const [hasMounted, setHasMounted] = useState(false);
 
@@ -19,40 +26,35 @@ export default function UploadFile() {
         setHasMounted(true);
     }, []);
 
-    return (
-        <div className="p-4">
-            <Dialog>
-                <DialogTrigger asChild>
-                    <Button>
-                        {hasMounted
-                            ? uploadSuccess
-                                ? "Upload Another"
-                                : "Upload File"
-                            : "Upload File"}
-                    </Button>
-                </DialogTrigger>
-                <DialogContent>
-                    <DialogTitle className="sr-only">Upload File</DialogTitle>
-                    <DialogDescription className="sr-only">
-                        Upload your file by selecting or dragging here
-                    </DialogDescription>
-                    <div className="text-xs text-muted-foreground">
-                        <span className="font-bold">Note:</span> It may take a few seconds for the uploaded file to appear while we extract its metadata.
-                    </div>
+    const label = hasMounted ? (uploadSuccess ? "Upload another" : "Upload") : "Upload";
 
-                    <FileUpload
-                        onChange={() => {
-                            setUploadSuccess(true);
-                            // window.location.reload();
-                        }}
-                    />
-                    <DialogClose asChild>
-                        <Button variant="outline" className="mt-4 w-full" onClick={() => window.location.reload()}>
-                            Close
-                        </Button>
-                    </DialogClose>
-                </DialogContent>
-            </Dialog>
-        </div>
+    return (
+        <Dialog onOpenChange={(open) => { if (!open && uploadSuccess) onUploaded?.(); }}>
+            <DialogTrigger asChild>
+                <Button size={compact ? "sm" : "default"} className="h-8 gap-1.5 bg-gradient-to-br from-violet-500 to-fuchsia-500 hover:from-violet-600 hover:to-fuchsia-600 text-white border-0">
+                    <IconCloudUpload size={14} />
+                    {label}
+                </Button>
+            </DialogTrigger>
+            <DialogContent>
+                <DialogTitle>Upload a file</DialogTitle>
+                <DialogDescription>
+                    Drop or pick a file. We&apos;ll extract and index it automatically — it&apos;ll appear in your list in seconds.
+                </DialogDescription>
+
+                <FileUpload
+                    onChange={() => {
+                        setUploadSuccess(true);
+                        onUploaded?.();
+                    }}
+                />
+
+                <DialogClose asChild>
+                    <Button variant="outline" className="mt-4 w-full">
+                        Done
+                    </Button>
+                </DialogClose>
+            </DialogContent>
+        </Dialog>
     );
 }

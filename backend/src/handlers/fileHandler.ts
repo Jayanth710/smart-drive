@@ -5,6 +5,7 @@ import logger from "../logger.js";
 import { GetSignedUrlConfig } from "@google-cloud/storage";
 import { bucket } from "../services/gcsUpload.js";
 import { deleteWeaviateFile } from "../services/queryWeaviate.js";
+import { publishFileMetadata } from "../utils/pubsub.js";
 
 const getUserFile = (fileRecord: UserFileType | null) => {
     const filePath = `${fileRecord?.userId}/${fileRecord?.fileHash}`;
@@ -151,9 +152,69 @@ const deleteFile = async (req: AuthenticatedRequest, res: Response) => {
     }
 }
 
+const triggerExtraction = async (req: AuthenticatedRequest, res: Response): Promise<void> => {
+    const userId = req.user?._id.toString();
+    const { fileId } = req.params;
+
+    if (!userId) {
+        res.status(401).json({ message: 'User not found' });
+        return;
+    }
+    if (!fileId) {
+        res.status(400).json({ message: 'File id is required' });
+        return;
+    }
+
+    try {
+        const fileRecord = await UserFile.findById(fileId);
+        if (!fileRecord || fileRecord.userId.toString() !== userId) {
+            logger.warn(`User ${userId} attempted to trigger extraction on unauthorized file ${fileId}`);
+            res.status(403).json({ message: 'Forbidden: You do not have access to this file.' });
+            return;
+        }
+
+        // Don't double-queue a file that's already mid-flight. The worker
+        // dedups against Weaviate too, but we save a round-trip here.
+        if (fileRecord.extractionStatus === 'processing') {
+            res.status(409).json({ message: 'Extraction already in progress.' });
+            return;
+        }
+
+        // Reset state so the UI immediately reflects "queued" — even before
+        // the worker picks the message up.
+        fileRecord.extractionStatus = 'pending';
+        fileRecord.extractionError = undefined;
+        await fileRecord.save();
+
+        try {
+            await publishFileMetadata(fileRecord);
+        } catch (pubsubErr) {
+            logger.error(`Re-publish failed for fileId ${fileId}:`, pubsubErr);
+            await UserFile.findByIdAndUpdate(fileId, {
+                extractionStatus: 'failed',
+                extractionError: 'Failed to enqueue extraction job',
+            });
+            res.status(502).json({ message: 'Could not enqueue the file for extraction.' });
+            return;
+        }
+
+        logger.info(`Re-queued extraction for fileId ${fileId}`);
+        res.status(202).json({
+            message: 'Extraction queued.',
+            extraction_status: 'pending',
+        });
+        return;
+    } catch (error) {
+        logger.error(`triggerExtraction failed for fileId ${fileId}:`, error);
+        res.status(500).json({ error: 'Could not trigger extraction.' });
+        return;
+    }
+};
+
 export {
     fileExistsHandler,
     generateFileSignedUrl,
-    deleteFile
+    deleteFile,
+    triggerExtraction
 }
 

@@ -2,25 +2,16 @@
 import React, { Dispatch, SetStateAction, useState } from "react";
 import { Label } from "@/components/ui/label";
 import { Input } from "./ui/input";
-import { cn } from "@/lib/utils";
-import {
-    IconBrandApple,
-    IconBrandGithub,
-    IconBrandGoogle,
-} from "@tabler/icons-react";
-// import { useRouter } from "next/navigation";
 import axios from "axios";
-import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { toast } from "react-toastify";
 import { Button } from "./ui/button";
 import apiClient from "@/lib/api";
+import { IconBrandGoogle, IconBrandApple, IconLoader2 } from "@tabler/icons-react";
 
-type LogInProps = {
-    className?: string
-    setIsLogin: Dispatch<SetStateAction<boolean>>
-    [key: string]: unknown
-}
+type Props = {
+    setIsLogin: Dispatch<SetStateAction<boolean>>;
+};
 
 interface SignUpFormData {
     firstname: string;
@@ -31,220 +22,134 @@ interface SignUpFormData {
     phone: string;
 }
 
-function SignUp({ setIsLogin }: LogInProps) {
-    // const [loading, setLoading] = useState(false);
-    const [error, setError] = useState("");
-    const [data, setData] = useState<SignUpFormData>({
-        firstname: "",
-        lastname: "",
-        email: "",
-        password: "",
-        re_password: "",
-        phone: ""
-    })
-    const router = useRouter()
+const initial: SignUpFormData = {
+    firstname: "", lastname: "", email: "", password: "", re_password: "", phone: "",
+};
 
-    const onChangeHandler = (event: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
-        setData({
-            ...data,
-            [event.target.name]: event.target.value,
+function SignUp({ setIsLogin }: Props) {
+    const [data, setData] = useState<SignUpFormData>(initial);
+    const [submitting, setSubmitting] = useState(false);
+    const router = useRouter();
 
-        })
-    }
+    const onChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+        setData({ ...data, [e.target.name]: e.target.value });
+    };
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
-        // setLoading(true);
-        setError("");
-
+        if (data.password !== data.re_password) {
+            toast.error("Passwords don't match.");
+            return;
+        }
+        setSubmitting(true);
         try {
-            // Send login data to the backend
-            if (data.password !== data.re_password) {
-                // setError("Password and re-password do not match.")
-                toast.error("Password and re-password do not match.")
-                return
-            }
-
-            const payload = {
+            const res = await apiClient.post("/api/register", {
                 firstname: data.firstname,
                 lastname: data.lastname,
                 email: data.email,
                 password: data.password,
                 phone: data.phone,
-            };
-
-            const response = await apiClient.post(`api/register`, payload)//axios.post(`${URL}/api/register`, payload);
-            console.log(response.data.message)
-            if (response.status === 201) {
-                console.log('User Registered')
-                toast.success(`${data.email} registration done was succesfull.`)
-                setIsLogin(true)
-                router.push('/')
-            }
-
-            setData({
-                firstname: "",
-                lastname: "",
-                email: "",
-                password: "",
-                re_password: "",
-                phone: ""
             });
-        } catch (err: unknown) {
+            if (res.status === 201) {
+                toast.success("Account created — please sign in.");
+                setData(initial);
+                setIsLogin(true);
+                router.push("/");
+            }
+        } catch (err) {
             if (axios.isAxiosError(err) && err.response) {
-                // setIsLogin(false)
-                console.error("Backend Error:", err.response.data.message);
-                toast.error(`Backend Error: ${err.response.data.message}`)
-                // Set the error message to display to the user
-                setError(err.response.data.message);
+                toast.error(err.response.data?.message ?? "Could not create account.");
+            } else {
+                toast.error("Something went wrong. Try again.");
             }
-            // setError("Login failed. Please check your credentials.");
-            else {
-                // Handle non-Axios errors or other unexpected issues
-                setError("An unexpected error occurred. Please try again.");
-                toast.error("An unexpected error occurred. Please try again.")
-                console.error(error);
-
-            }
-        }
-        finally {
-            setData({
-                firstname: "",
-                lastname: "",
-                email: "",
-                password: "",
-                re_password: "",
-                phone: ""
-            });
+        } finally {
+            setSubmitting(false);
         }
     };
 
-    const handleDevelop = () => {
-        toast.info('Feature under development.')
-    }
+    const onComingSoon = () => toast.info("Coming soon.");
+
     return (
-        <div className="shadow-2xl mx-auto w-full max-w-md rounded-none bg-white p-4 md:rounded-2xl md:p-6 dark:bg-black">
-            <h2 className="text-xl font-bold text-neutral-800 dark:text-neutral-200">
-                Welcome to DocuMind
-            </h2>
-            <p className="mt-1 max-w-sm text-sm text-neutral-600 dark:text-neutral-300">
-                Sign Up to DocuMind if you can because we don&apos;t have a login flow
-                yet
-            </p>
+        <div className="space-y-6">
+            <div>
+                <h1 className="text-2xl font-semibold tracking-tight">Create your account</h1>
+                <p className="text-sm text-muted-foreground mt-1">
+                    Free to start. Upload your first file in under a minute.
+                </p>
+            </div>
 
-            <form className="my-6" onSubmit={handleSubmit}>
-                <div className="mb-4 flex flex-col space-y-2 md:flex-row md:space-y-0 md:space-x-2">
-                    <LabelInputContainer>
+            <form onSubmit={handleSubmit} className="space-y-3">
+                <div className="grid grid-cols-2 gap-3">
+                    <div className="grid gap-1.5">
                         <Label htmlFor="firstname">First name</Label>
-                        <Input id="firstname" placeholder="Tyler" type="text" name="firstname" onChange={onChangeHandler} value={data.firstname} />
-                    </LabelInputContainer>
-                    <LabelInputContainer>
+                        <Input id="firstname" name="firstname" placeholder="Ada" value={data.firstname} onChange={onChange} required />
+                    </div>
+                    <div className="grid gap-1.5">
                         <Label htmlFor="lastname">Last name</Label>
-                        <Input id="lastname" placeholder="Durden" type="text" name="lastname" onChange={onChangeHandler} value={data.lastname} />
-
-                    </LabelInputContainer>
+                        <Input id="lastname" name="lastname" placeholder="Lovelace" value={data.lastname} onChange={onChange} required />
+                    </div>
                 </div>
-                <LabelInputContainer className="mb-4">
-                    <Label htmlFor="email">Email Address</Label>
-                    <Input id="email" placeholder="projectmayhem@fc.com" type="email" name="email" onChange={onChangeHandler} value={data.email} />
-                </LabelInputContainer>
-                <LabelInputContainer className="mb-4">
-                    <Label htmlFor="password">Password</Label>
-                    <Input id="password" placeholder="••••••••" type="password" name="password" onChange={onChangeHandler} value={data.password} />
-
-                </LabelInputContainer>
-                <LabelInputContainer className="mb-4">
-                    <Label htmlFor="repassword">Re-enter password</Label>
-                    <Input
-                        id="repassword"
-                        placeholder="••••••••"
-                        type="password"
-                        name="re_password"
-                        onChange={onChangeHandler}
-                        value={data.re_password}
-                    />
-                </LabelInputContainer>
-                <LabelInputContainer className="mb-4">
-                    <Label htmlFor="phone">Phone Number</Label>
-                    <Input
-                        id="phone"
-                        placeholder="+1234567890"
-                        type="string"
-                        name="phone"
-                        onChange={onChangeHandler}
-                        value={data.phone}
-                    />
-                </LabelInputContainer>
+                <div className="grid gap-1.5">
+                    <Label htmlFor="email">Email</Label>
+                    <Input id="email" name="email" type="email" placeholder="you@example.com" value={data.email} onChange={onChange} required />
+                </div>
+                <div className="grid gap-1.5">
+                    <Label htmlFor="phone">Phone (optional)</Label>
+                    <Input id="phone" name="phone" type="tel" placeholder="+1 555 010 1234" value={data.phone} onChange={onChange} />
+                </div>
+                <div className="grid grid-cols-2 gap-3">
+                    <div className="grid gap-1.5">
+                        <Label htmlFor="password">Password</Label>
+                        <Input id="password" name="password" type="password" placeholder="••••••••" value={data.password} onChange={onChange} required />
+                    </div>
+                    <div className="grid gap-1.5">
+                        <Label htmlFor="re_password">Confirm</Label>
+                        <Input id="re_password" name="re_password" type="password" placeholder="••••••••" value={data.re_password} onChange={onChange} required />
+                    </div>
+                </div>
 
                 <button
-                    className="group/btn relative block h-10 w-full rounded-md bg-gradient-to-br from-black to-neutral-600 font-medium text-white shadow-[0px_1px_0px_0px_#ffffff40_inset,0px_-1px_0px_0px_#ffffff40_inset] dark:bg-zinc-800 dark:from-zinc-900 dark:to-zinc-900 dark:shadow-[0px_1px_0px_0px_#27272a_inset,0px_-1px_0px_0px_#27272a_inset]"
                     type="submit"
-                    onClick={(e)=>handleSubmit(e)}
+                    disabled={submitting}
+                    className="group/btn relative mt-2 flex h-10 w-full items-center justify-center rounded-md bg-gradient-to-br from-black to-neutral-600 font-medium text-white shadow-[0px_1px_0px_0px_#ffffff40_inset,0px_-1px_0px_0px_#ffffff40_inset] dark:bg-zinc-800 dark:from-zinc-900 dark:to-zinc-900 dark:shadow-[0px_1px_0px_0px_#27272a_inset,0px_-1px_0px_0px_#27272a_inset] disabled:opacity-60 disabled:cursor-not-allowed cursor-pointer"
                 >
-                    Sign up &rarr;
-                    <BottomGradient />
+                    {submitting ? (
+                        <><IconLoader2 size={16} className="mr-2 animate-spin" /> Creating account…</>
+                    ) : <>Create account &rarr;</>}
                 </button>
-
-                <div className="my-8 h-[1px] w-full bg-gradient-to-r from-transparent via-neutral-300 to-transparent dark:via-neutral-700" />
-
-                <div className="grid grid-cols-3 gap-4">
-                    <Button variant="outline" className="w-full cursor-pointer" onClick={handleDevelop} type="button">
-                        <IconBrandGithub className="h-4 w-4 text-neutral-800 dark:text-neutral-300" />
-                        <span className="text-sm text-neutral-700 dark:text-neutral-300">
-                            GitHub
-                        </span>
-                        <BottomGradient />
-                        <span className="sr-only">Login with Apple</span>
-                    </Button>
-                    <Button variant="outline" className="w-full cursor-pointer" onClick={handleDevelop} type="button">
-                        <IconBrandGoogle className="h-4 w-4 text-neutral-800 dark:text-neutral-300" />
-                        <span className="text-sm text-neutral-700 dark:text-neutral-300">
-                            Google
-                        </span>
-                        <BottomGradient />
-                        <span className="sr-only">Login with Apple</span>
-                    </Button>
-                    <Button variant="outline" className="w-full cursor-pointer" onClick={handleDevelop} type="button">
-                        <IconBrandApple className="h-4 w-4 text-neutral-800 dark:text-neutral-300" />
-                        <span className="text-sm text-neutral-700 dark:text-neutral-300">
-                            Apple
-                        </span>
-                        <BottomGradient />
-                        <span className="sr-only">Login with Google</span>
-                    </Button>
-                </div>
             </form>
-            <div className="text-center text-sm text-black dark:text-white" onClick={() => setIsLogin(true)}>
-                Already have an account?{" "}
-                <Link href="/" className="underline underline-offset-4">
-                    Log In
-                </Link>
+
+            <div className="relative">
+                <div className="absolute inset-0 flex items-center">
+                    <span className="w-full border-t" />
+                </div>
+                <div className="relative flex justify-center text-xs">
+                    <span className="bg-background px-2 text-muted-foreground">or sign up with</span>
+                </div>
             </div>
+
+            <div className="grid grid-cols-2 gap-2">
+                <Button variant="outline" type="button" onClick={onComingSoon} className="h-9">
+                    <IconBrandGoogle size={16} className="mr-2" /> Google
+                </Button>
+                <Button variant="outline" type="button" onClick={onComingSoon} className="h-9">
+                    <IconBrandApple size={16} className="mr-2" /> Apple
+                </Button>
+            </div>
+
+            <p className="text-center text-sm text-muted-foreground">
+                Already have an account?{" "}
+                <button onClick={() => setIsLogin(true)} className="font-medium text-foreground hover:underline">
+                    Sign in
+                </button>
+            </p>
+
+            <p className="text-center text-[11px] text-muted-foreground">
+                By creating an account, you agree to our <a href="#" className="underline">Terms</a> and{" "}
+                <a href="#" className="underline">Privacy Policy</a>.
+            </p>
         </div>
     );
 }
-
-const BottomGradient = () => {
-    return (
-        <>
-            <span className="absolute inset-x-0 -bottom-px block h-px w-full bg-gradient-to-r from-transparent via-cyan-500 to-transparent opacity-0 transition duration-500 group-hover/btn:opacity-100" />
-            <span className="absolute inset-x-10 -bottom-px mx-auto block h-px w-1/2 bg-gradient-to-r from-transparent via-indigo-500 to-transparent opacity-0 blur-sm transition duration-500 group-hover/btn:opacity-100" />
-        </>
-    );
-};
-
-const LabelInputContainer = ({
-    children,
-    className,
-}: {
-    children: React.ReactNode;
-    className?: string;
-}) => {
-    return (
-        <div className={cn("flex w-full flex-col space-y-2", className)}>
-            {children}
-        </div>
-    );
-};
 
 export default SignUp;
