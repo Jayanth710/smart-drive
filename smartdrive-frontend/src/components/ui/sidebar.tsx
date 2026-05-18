@@ -3,6 +3,8 @@ import { cn } from "@/lib/utils";
 import React, { useState, createContext, useContext } from "react";
 import { AnimatePresence, motion } from "motion/react";
 import { IconMenu2, IconX } from "@tabler/icons-react";
+import Image from "next/image";
+import Link from "next/link";
 
 interface Links {
   label: string;
@@ -112,16 +114,24 @@ export const MobileSidebar = ({
     <>
       <div
         className={cn(
-          "h-12 px-4 py-3 flex flex-row md:hidden items-center justify-between bg-background border-b border-border w-full"
+          "h-12 px-3 py-2 flex flex-row md:hidden items-center justify-between bg-background border-b border-border w-full shrink-0"
         )}
         {...props}
       >
-        <div className="flex justify-end z-20 w-full">
-          <IconMenu2
-            className="text-neutral-800 dark:text-neutral-200"
-            onClick={() => setOpen(!open)}
-          />
-        </div>
+        <button
+          onClick={() => setOpen(!open)}
+          aria-label="Open menu"
+          className="z-20 p-1 text-neutral-800 dark:text-neutral-200"
+        >
+          <IconMenu2 />
+        </button>
+        <Link href="/dashboard" className="flex items-center gap-1.5">
+          <Image src="/SmartDrive.svg" alt="SmartDrive" width={22} height={22} />
+          <span className="text-sm font-semibold bg-gradient-to-r from-violet-600 to-fuchsia-500 bg-clip-text text-transparent">
+            SmartDrive
+          </span>
+        </Link>
+        <span className="w-8" />
         <AnimatePresence>
           {open && (
             <motion.div
@@ -133,7 +143,7 @@ export const MobileSidebar = ({
                 ease: "easeInOut",
               }}
               className={cn(
-                "fixed h-full w-full inset-0 bg-background p-8 z-[100] flex flex-col justify-between",
+                "fixed inset-0 h-[100dvh] w-full bg-background p-6 z-[100] flex flex-col justify-between overflow-y-auto",
                 className
               )}
             >

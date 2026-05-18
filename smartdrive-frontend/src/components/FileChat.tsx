@@ -365,7 +365,7 @@ export function FileChat({ fileId, fileName, ready }: Props) {
                     }}
                     placeholder="Ask a question · Enter to send, Shift+Enter for newline"
                     disabled={busy}
-                    className="flex-1 text-sm px-3 py-2 min-h-10 rounded-md border bg-background focus:outline-none focus:ring-2 focus:ring-violet-500/30 disabled:opacity-60 resize-none"
+                    className="flex-1 text-base sm:text-sm px-3 py-2 min-h-10 rounded-md border bg-background focus:outline-none focus:ring-2 focus:ring-violet-500/30 disabled:opacity-60 resize-none"
                 />
                 {busy ? (
                     <Button size="sm" variant="secondary" onClick={stop} className="h-10" title="Stop generating">
