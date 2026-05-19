@@ -440,7 +440,13 @@ const chatWithFileStream = async (req: AuthenticatedRequest, res: Response): Pro
             return;
         }
         if (fileRecord.extractionStatus !== 'done') {
-            res.status(409).json({ message: 'Not ready for chat yet.' });
+            const statusMsg = fileRecord.extractionStatus === 'failed'
+                ? 'Extraction failed for this file. Re-run extraction from the file menu.'
+                : 'This file is still being processed. It usually takes 30-60 seconds — try again in a moment.';
+            res.status(409).json({
+                message: statusMsg,
+                extraction_status: fileRecord.extractionStatus,
+            });
             return;
         }
 

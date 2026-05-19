@@ -349,9 +349,34 @@ export function FileChat({ fileId, fileName, ready }: Props) {
             </div>
 
             {error && (
-                <div className="text-xs text-red-600/90 flex items-start gap-1.5">
-                    <IconAlertTriangle size={12} className="mt-0.5 shrink-0" /> {error}
-                </div>
+                (() => {
+                    const isNotReady = /still being processed|not ready/i.test(error);
+                    const isFailed = /extraction failed/i.test(error);
+                    const isPrivate = /private/i.test(error);
+                    const tone = isNotReady
+                        ? "border-amber-300/60 bg-amber-50/70 text-amber-900 dark:border-amber-500/30 dark:bg-amber-500/10 dark:text-amber-100"
+                        : isPrivate
+                            ? "border-emerald-300/60 bg-emerald-50/70 text-emerald-900 dark:border-emerald-500/30 dark:bg-emerald-500/10 dark:text-emerald-100"
+                            : "border-red-300/60 bg-red-50/70 text-red-900 dark:border-red-500/30 dark:bg-red-500/10 dark:text-red-100";
+                    return (
+                        <div className={`text-xs flex items-start gap-1.5 rounded-md border px-3 py-2 ${tone}`}>
+                            <IconAlertTriangle size={12} className="mt-0.5 shrink-0" />
+                            <div className="min-w-0">
+                                <div>{error}</div>
+                                {isNotReady && (
+                                    <div className="mt-1 opacity-80">
+                                        The file is being indexed in the background. This usually takes 30-60 seconds.
+                                    </div>
+                                )}
+                                {isFailed && (
+                                    <div className="mt-1 opacity-80">
+                                        Open the file menu and click &ldquo;Re-run extraction&rdquo; to try again.
+                                    </div>
+                                )}
+                            </div>
+                        </div>
+                    );
+                })()
             )}
 
             <div className="flex gap-2 items-end">

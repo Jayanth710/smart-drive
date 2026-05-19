@@ -478,11 +478,19 @@ export const runSearchPipeline = async (
         };
     });
 
-    results.sort((a, b) => b.score - a.score);
-    logger.info(`search: ${results.length} results for "${rawQuery}" (top score=${results[0]?.score.toFixed(4)})`);
+    // Drop nameless results. These come from file_ids that the parent fetch
+    // couldn't find a matching summary row for (race condition between delete
+    // and re-extract, or orphaned chunk rows). The UI can't render them and
+    // they'd crash on .split() / .localeCompare().
+    const cleaned = results.filter((r) => typeof r.filename === "string" && r.filename.length > 0);
+    cleaned.sort((a, b) => b.score - a.score);
+    if (cleaned.length < results.length) {
+        logger.warn(`search: dropped ${results.length - cleaned.length} orphan result(s) without filename`);
+    }
+    logger.info(`search: ${cleaned.length} results for "${rawQuery}" (top score=${cleaned[0]?.score.toFixed(4)})`);
 
     // Cap to a reasonable top-K — UI doesn't need 200 results.
-    return results.slice(0, 30);
+    return cleaned.slice(0, 30);
 };
 
 // ---------- 7. Optional LLM rerank for the top results ----------

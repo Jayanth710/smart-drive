@@ -492,7 +492,7 @@ function FileCard({
                                 </div>
                             </div>
                             {(() => {
-                                const ext = file.filename.split(".").pop()?.toUpperCase();
+                                const ext = (file.filename ?? "").split(".").pop()?.toUpperCase();
                                 if (!ext || ext.length > 5) return null;
                                 return (
                                     <div className="text-[11px] font-semibold tracking-wider px-2 py-1 rounded-md bg-background/70 text-foreground/80 ring-1 ring-border">
@@ -697,8 +697,8 @@ function sortFiles(arr: UploadItem[], kind: SortKind): UploadItem[] {
     switch (kind) {
         case "newest": return copy.sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
         case "oldest": return copy.sort((a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime());
-        case "name": return copy.sort((a, b) => a.filename.localeCompare(b.filename));
-        case "type": return copy.sort((a, b) => a.filetype.localeCompare(b.filetype));
+        case "name": return copy.sort((a, b) => (a.filename ?? "").localeCompare(b.filename ?? ""));
+        case "type": return copy.sort((a, b) => (a.filetype ?? "").localeCompare(b.filetype ?? ""));
         case "status": {
             const order: Record<string, number> = { failed: 0, processing: 1, pending: 2, done: 3 };
             return copy.sort((a, b) => (order[a.extraction_status ?? "done"] ?? 4) - (order[b.extraction_status ?? "done"] ?? 4));
@@ -805,7 +805,7 @@ export function FileListWithDrawer({
     const visibleFiles = useMemo(() => {
         const filtered = files.filter((f) => matchesFilter(f, filter));
         const searched = search.trim()
-            ? filtered.filter((f) => f.filename.toLowerCase().includes(search.toLowerCase().trim()))
+            ? filtered.filter((f) => (f.filename ?? "").toLowerCase().includes(search.toLowerCase().trim()))
             : filtered;
         return sortFiles(searched, sort);
     }, [files, filter, sort, search]);
