@@ -752,6 +752,8 @@ export function FileListWithDrawer({
     const [drawerOpen, setDrawerOpen] = useState(false);
 
     const [confirmDeleteOpen, setConfirmDeleteOpen] = useState(false);
+    const [privacyConfirm, setPrivacyConfirm] = useState<{ file: UploadItem; nextPrivate: boolean } | null>(null);
+    const [privacyBusy, setPrivacyBusy] = useState(false);
     const [actionById, setActionById] = useState<Record<string, Action>>({});
 
     const [previewUrl, setPreviewUrl] = useState<string | null>(null);
@@ -907,21 +909,25 @@ export function FileListWithDrawer({
         onRefresh();
     }, [bulkSelected, onRefresh]);
 
-    const handleTogglePrivacy = useCallback(async (file: UploadItem) => {
-        const nextPrivate = !file.is_private;
-        const verb = nextPrivate ? "Mark as private" : "Enable AI features";
-        const detail = nextPrivate
-            ? "This will remove the AI summary and disable chat for this file. The file itself stays uploaded."
-            : "This will re-extract the file and send its contents to the AI for summarization and indexing.";
-        if (!window.confirm(`${verb}?\n\n${detail}\n\nContinue?`)) return;
+    const requestTogglePrivacy = useCallback((file: UploadItem) => {
+        setPrivacyConfirm({ file, nextPrivate: !file.is_private });
+    }, []);
+
+    const confirmTogglePrivacy = useCallback(async () => {
+        if (!privacyConfirm) return;
+        const { file, nextPrivate } = privacyConfirm;
+        setPrivacyBusy(true);
         try {
             await apiClient.patch(`/file/${file.file_id}/privacy`, { isPrivate: nextPrivate });
             toast.success(nextPrivate ? "Marked as private." : "AI features enabled. Re-extracting…");
+            setPrivacyConfirm(null);
             onRefresh();
         } catch (err) {
             toast.error(`Could not update privacy: ${(err as Error).message || "unknown error"}`);
+        } finally {
+            setPrivacyBusy(false);
         }
-    }, [onRefresh]);
+    }, [privacyConfirm, onRefresh]);
 
     const handleRetryAllFailed = useCallback(async () => {
         const failedIds = files
@@ -1192,7 +1198,7 @@ export function FileListWithDrawer({
                             onDownload={() => handleDownload(file)}
                             onExtract={() => handleExtract(file)}
                             onToggleSelect={() => toggleSelect(file.file_id)}
-                            onTogglePrivacy={() => handleTogglePrivacy(file)}
+                            onTogglePrivacy={() => requestTogglePrivacy(file)}
                             onDeleteRequest={() => {
                                 setSelectedId(file.file_id);
                                 setConfirmDeleteOpen(true);
@@ -1452,6 +1458,67 @@ export function FileListWithDrawer({
                             {selectedFile && (actionById[selectedFile.file_id] ?? null) === "delete"
                                 ? "Deleting…"
                                 : "Delete"}
+                        </AlertDialogAction>
+                    </AlertDialogFooter>
+                </AlertDialogContent>
+            </AlertDialog>
+
+            <AlertDialog
+                open={privacyConfirm !== null}
+                onOpenChange={(open) => { if (!open && !privacyBusy) setPrivacyConfirm(null); }}
+            >
+                <AlertDialogContent>
+                    <AlertDialogHeader>
+                        <AlertDialogTitle className="flex items-center gap-2">
+                            {privacyConfirm?.nextPrivate ? (
+                                <><IconLock size={18} /> Mark as private?</>
+                            ) : (
+                                <><IconLockOpen size={18} /> Enable AI features?</>
+                            )}
+                        </AlertDialogTitle>
+                        <AlertDialogDescription asChild>
+                            <div className="space-y-3 text-sm">
+                                <p>
+                                    <span className="font-medium text-foreground">
+                                        {privacyConfirm?.file.filename ?? "This file"}
+                                    </span>
+                                </p>
+                                {privacyConfirm?.nextPrivate ? (
+                                    <>
+                                        <p>
+                                            The AI summary and any chat index will be removed. The file itself stays uploaded — you can still view and download it.
+                                        </p>
+                                        <ul className="list-disc list-inside text-xs text-muted-foreground space-y-0.5">
+                                            <li>No summarization, OCR, or embedding</li>
+                                            <li>Chat is disabled for this file</li>
+                                            <li>Only the filename is searchable</li>
+                                        </ul>
+                                    </>
+                                ) : (
+                                    <>
+                                        <p>
+                                            The file&apos;s contents will be re-extracted and sent to the AI for summarization, entity extraction, and semantic indexing.
+                                        </p>
+                                        <ul className="list-disc list-inside text-xs text-muted-foreground space-y-0.5">
+                                            <li>Summary and entities will be generated</li>
+                                            <li>Chat will become available</li>
+                                            <li>Content becomes searchable across the index</li>
+                                        </ul>
+                                    </>
+                                )}
+                            </div>
+                        </AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <AlertDialogFooter>
+                        <AlertDialogCancel disabled={privacyBusy}>Cancel</AlertDialogCancel>
+                        <AlertDialogAction
+                            onClick={(e) => { e.preventDefault(); confirmTogglePrivacy(); }}
+                            disabled={privacyBusy}
+                            className={privacyConfirm?.nextPrivate ? "" : "bg-violet-600 hover:bg-violet-700 text-white"}
+                        >
+                            {privacyBusy
+                                ? "Updating…"
+                                : privacyConfirm?.nextPrivate ? "Mark private" : "Enable AI"}
                         </AlertDialogAction>
                     </AlertDialogFooter>
                 </AlertDialogContent>

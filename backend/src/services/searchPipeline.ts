@@ -152,6 +152,16 @@ const recencyBoost = (createdAt: unknown, baseScore: number): number => {
 
 type WClient = Awaited<ReturnType<typeof getWeaviateClient>>;
 
+/** Pick alpha based on query length. Short queries (1-3 tokens) are usually
+ *  keyword-driven — bias toward BM25. Longer queries are natural language —
+ *  let dense pull more weight. */
+const pickAlpha = (query: string): number => {
+    const tokens = query.trim().split(/\s+/).filter(Boolean);
+    if (tokens.length <= 3) return 0.25; // 75% BM25, 25% dense
+    if (tokens.length <= 6) return 0.5;  // balanced
+    return 0.7; // 70% dense, 30% BM25
+};
+
 const chunkHybridSignal = async (
     client: NonNullable<WClient>,
     chunksName: string,
@@ -163,7 +173,7 @@ const chunkHybridSignal = async (
     const col = client.collections.get(chunksName);
     const res = await col.query.hybrid(query, {
         vector,
-        alpha: 0.5,
+        alpha: pickAlpha(query),
         limit: 50,
         filters: col.filter.byProperty("user_id").equal(userId),
         returnMetadata: ["score"],
@@ -178,6 +188,40 @@ const chunkHybridSignal = async (
         seen.set(fid, { file_id: fid, rank: rank++, matched_chunk: p.chunk_text });
     }
     return [...seen.values()];
+};
+
+/** Pure BM25 over chunk text. Critical for rare-term queries like proper nouns
+ *  ("Guwahati", "Acme Corp") — hybrid's dense half dilutes exact matches,
+ *  but pure BM25 ranks the unique-term file at #1 reliably. RRF fuses this
+ *  with the hybrid signal so common-word queries still benefit from semantic. */
+const chunkBM25Signal = async (
+    client: NonNullable<WClient>,
+    chunksName: string,
+    userId: string,
+    query: string,
+): Promise<SignalHit[]> => {
+    if (!(await client.collections.exists(chunksName))) return [];
+    const col = client.collections.get(chunksName);
+    try {
+        const res = await col.query.bm25(query, {
+            queryProperties: ["chunk_text"],
+            limit: 50,
+            filters: col.filter.byProperty("user_id").equal(userId),
+            returnMetadata: ["score"],
+        });
+        const seen = new Map<string, SignalHit>();
+        let rank = 1;
+        for (const obj of res.objects) {
+            const p = obj.properties as { file_id?: string; chunk_text?: string };
+            const fid = String(p.file_id ?? "");
+            if (!fid || seen.has(fid)) { rank++; continue; }
+            seen.set(fid, { file_id: fid, rank: rank++, matched_chunk: p.chunk_text });
+        }
+        return [...seen.values()];
+    } catch (e) {
+        logger.warn(`chunkBM25Signal on ${chunksName} failed: ${e}`);
+        return [];
+    }
 };
 
 const filenameBM25Signal = async (
@@ -294,12 +338,42 @@ const entitySignal = async (
 
 // ---------- 6. Orchestrator ----------
 
-const intentWeights = (intent: Intent): { chunk: number; filename: number; summary: number; entity: number } => {
+const intentWeights = (intent: Intent): { chunk: number; chunkBM25: number; filename: number; summary: number; entity: number } => {
     // Defaults are balanced. Filename intent boosts filename + summary (where the name lives).
     // Pure content intent boosts chunk/body.
-    if (intent.filename) return { chunk: 1.0, filename: 2.5, summary: 1.5, entity: 1.5 };
-    if (intent.exactPhrases.length > 0) return { chunk: 2.0, filename: 1.0, summary: 1.5, entity: 2.0 };
-    return { chunk: 1.5, filename: 1.0, summary: 1.0, entity: 1.5 };
+    // chunkBM25 is the pure-lexical companion to chunk hybrid — weight it strongly
+    // because exact-term matches (proper nouns, IDs, rare words) are what users
+    // most often expect to win.
+    if (intent.filename) return { chunk: 1.0, chunkBM25: 1.5, filename: 2.5, summary: 1.5, entity: 1.5 };
+    if (intent.exactPhrases.length > 0) return { chunk: 1.5, chunkBM25: 2.5, filename: 1.0, summary: 1.5, entity: 2.0 };
+    return { chunk: 1.5, chunkBM25: 2.0, filename: 1.0, summary: 1.0, entity: 1.5 };
+};
+
+/** Exact-substring match post-RRF bonus. If the query token literally appears
+ *  in the file's filename, summary, or matched chunk, give a meaningful score
+ *  bump. Catches the "one file uniquely contains this term — it should be #1"
+ *  failure mode that RRF alone misses.
+ *
+ *  Scaled to ~0.05 per match, which dominates the typical RRF score
+ *  (range 0.01-0.10) without overwhelming intentional ranking. */
+const exactMatchBoost = (
+    query: string,
+    properties: Record<string, unknown>,
+    matchedChunk?: string,
+): number => {
+    const tokens = query.toLowerCase().split(/\s+/).filter((t) => t.length >= 3);
+    if (tokens.length === 0) return 0;
+    const filename = String(properties.filename ?? "").toLowerCase();
+    const summary = String(properties.summary ?? "").toLowerCase();
+    const chunk = (matchedChunk ?? "").toLowerCase();
+    let bonus = 0;
+    for (const tok of tokens) {
+        // Filename match is the strongest signal — user named the file with this word.
+        if (filename.includes(tok)) bonus += 0.08;
+        if (summary.includes(tok)) bonus += 0.04;
+        if (chunk.includes(tok)) bonus += 0.03;
+    }
+    return bonus;
 };
 
 export const runSearchPipeline = async (
@@ -337,6 +411,8 @@ export const runSearchPipeline = async (
     await Promise.all(pairs.flatMap(({ summary: summaryName, chunks: chunksName }) => [
         chunkHybridSignal(client, chunksName, userId, queryForRetrieval, queryVector)
             .then((hits) => allSignals.push({ name: "content", hits, weight: weights.chunk })),
+        chunkBM25Signal(client, chunksName, userId, queryForRetrieval)
+            .then((hits) => allSignals.push({ name: "content-bm25", hits, weight: weights.chunkBM25 })),
         filenameBM25Signal(client, summaryName, userId, queryForRetrieval)
             .then((hits) => allSignals.push({ name: "filename", hits, weight: weights.filename })),
         summaryHybridSignal(client, summaryName, userId, queryForRetrieval, queryVector)
@@ -379,17 +455,21 @@ export const runSearchPipeline = async (
         }
     }));
 
-    // Final scoring: fused RRF score + recency boost (if intent suggests it).
+    // Final scoring: fused RRF + recency boost + exact-match boost.
+    // The exact-match boost is the critical safety net for rare-term queries
+    // ("Guwahati", "INV-12345"). Without it, RRF can demote the one file that
+    // uniquely contains the term in favor of files that rank middling-but-everywhere.
     const recencyMultiplier = analysis.intent.recency ? 3 : 1;
     const results: SearchResult[] = fileIds.map((fid) => {
         const f = fused.get(fid)!;
         const parent = summariesByFile.get(fid) ?? {};
-        const boost = recencyMultiplier * recencyBoost(parent.created_at, f.score);
+        const recBoost = recencyMultiplier * recencyBoost(parent.created_at, f.score);
+        const exactBoost = exactMatchBoost(queryForRetrieval, parent, f.bestChunk);
         const entityMatch = entityMatchByFile.get(fid);
         return {
             ...parent,
             file_id: fid,
-            score: f.score + boost,
+            score: f.score + recBoost + exactBoost,
             matched_in: [...f.matched_in],
             matched_chunk: f.bestChunk,
             matched_entities: entityMatch?.entities.length ? entityMatch.entities : undefined,
