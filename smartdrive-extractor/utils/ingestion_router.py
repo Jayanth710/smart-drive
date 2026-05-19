@@ -6,6 +6,7 @@ from smartdrive_core.weaviate_client import check_file_exists
 from smartdrive_core.mongo_status import update_status
 from .image_pipeline import process_image
 from .document_extractor import process_document
+from .weaviate_utils import save_doc_private, save_image_private
 
 logger = logging.getLogger(__name__)
 
@@ -37,6 +38,17 @@ def route_and_process(file_path: str, data: dict):
             return {"message": f"Skipping media mime={mime}", "created": False}
 
         update_status(str(file_id), "processing")
+
+        # Hard guard: a private file must never reach the LLM/OCR pipeline.
+        # Even if the per-processor check were missed, the router catches it.
+        if data.get("isPrivate"):
+            logger.info(f"Router: private file '{filename}' — writing filename stub only, skipping LLM/OCR")
+            if mime.startswith("image/"):
+                save_image_private(data)
+            else:
+                save_doc_private(data)
+            update_status(str(file_id), "done")
+            return {"message": f"Saved {filename} as private (content not indexed)", "created": True}
 
         if mime.startswith("image/"):
             logger.info("checking if image exists")

@@ -194,6 +194,24 @@ const triggerExtraction = async (req: AuthenticatedRequest, res: Response): Prom
             return;
         }
 
+        // Hard guard: a private file must NEVER be sent to the worker for
+        // LLM extraction. The worker should also check isPrivate and write a
+        // stub, but a stale worker deploy could ignore the flag — so refuse
+        // here as well. Re-extraction of a private file is a no-op; the
+        // filename stub is already indexed.
+        if (fileRecord.isPrivate) {
+            logger.info(`triggerExtraction skipped for private fileId=${fileId} — already indexed as stub`);
+            fileRecord.extractionStatus = 'done';
+            fileRecord.extractionError = undefined;
+            fileRecord.chatReady = false;
+            await fileRecord.save();
+            res.status(200).json({
+                message: 'File is marked private — re-extraction would send contents to AI and is blocked. Toggle privacy off first.',
+                extraction_status: 'done',
+            });
+            return;
+        }
+
         // Reset state so the UI immediately reflects "queued" — even before
         // the worker picks the message up. Also flush the cached chat index:
         // a re-extracted file should be chunked from the new text, not the old.
