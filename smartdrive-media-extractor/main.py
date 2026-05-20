@@ -2,6 +2,7 @@ import logging
 import os
 from app.app import create_app
 from utils.media_utils import warm_whisper_model
+from smartdrive_core.mongo_status import sweep_orphaned_files
 
 logging.basicConfig(
     level=logging.INFO,
@@ -18,6 +19,14 @@ try:
     logger.info("Whisper model ready")
 except Exception as e:
     logger.warning(f"Whisper warm-up failed (will retry lazily): {e}")
+
+# Sweep orphaned media files (worker died mid-transcription).
+try:
+    n = sweep_orphaned_files(stale_minutes=15)  # media takes longer than docs
+    if n > 0:
+        logger.warning(f"Reset {n} orphaned media file(s) on boot — re-extraction queued")
+except Exception as e:
+    logger.warning(f"Orphan sweep failed (non-fatal): {e}")
 
 
 if __name__ == "__main__":

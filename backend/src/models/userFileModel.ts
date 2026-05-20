@@ -18,6 +18,13 @@ export interface UserFileType extends mongoose.Document {
      *  no body embedding, no chunks. Only filename + metadata are indexed so the
      *  user can still find the file by name. Chat is disabled for private files. */
     isPrivate?: boolean;
+    /** Personalization signal — files the user interacts with rank higher in
+     *  search. Touched on chat-prep, chat-stream, view, download. */
+    lastAccessedAt?: Date | null;
+    accessCount?: number;
+    /** Extraction progress for UI ("extracting page 3 of 12"). Worker
+     *  updates this periodically during processing. Cleared when status='done'. */
+    extractionProgress?: { current: number; total: number; stage: string } | null;
     createdAt: Date;
     updatedAt: Date;
 }
@@ -63,6 +70,13 @@ const userFileSchema = new mongoose.Schema(
             type: Boolean,
             default: false,
             index: true,
+        },
+        lastAccessedAt: { type: Date, default: null },
+        accessCount: { type: Number, default: 0 },
+        extractionProgress: {
+            current: { type: Number, default: 0 },
+            total: { type: Number, default: 0 },
+            stage: { type: String, default: "" },
         },
     },
     {

@@ -11,6 +11,7 @@ dependencies = [
   "weaviate-client>=4.15.3",
   "docling[easyocr]",
   "google-genai",
+  "pypdf>=5.0",
   "smartdrive-core",
 ]
 

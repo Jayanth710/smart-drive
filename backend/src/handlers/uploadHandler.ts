@@ -162,6 +162,9 @@ const getUploads = async (req: AuthenticatedRequest, res: Response): Promise<voi
         summary: enrichment?.summary,
         index_json: enrichment?.indexJson,
         is_private: !!f.isPrivate,
+        // Live extraction progress for UI ("Summarizing with AI 2/4").
+        // Worker writes this; frontend's poll loop picks it up.
+        extraction_progress: status === 'processing' || status === 'pending' ? f.extractionProgress : undefined,
       };
     });
 

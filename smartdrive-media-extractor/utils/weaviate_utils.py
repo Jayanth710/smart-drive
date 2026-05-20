@@ -15,6 +15,8 @@ MEDIA_PROPS = [
     wvc.config.Property(name="user_id", data_type=wvc.config.DataType.TEXT),
     wvc.config.Property(name="summary", data_type=wvc.config.DataType.TEXT),
     wvc.config.Property(name="raw_text", data_type=wvc.config.DataType.TEXT, index_searchable=False),
+    # R3 — searchable body mirror.
+    wvc.config.Property(name="body_text", data_type=wvc.config.DataType.TEXT, index_searchable=True),
     wvc.config.Property(name="filename", data_type=wvc.config.DataType.TEXT),
     wvc.config.Property(name="filetype", data_type=wvc.config.DataType.TEXT),
     wvc.config.Property(name="created_at", data_type=wvc.config.DataType.DATE, index_filterable=True),
@@ -54,6 +56,7 @@ def save_media_private(data: dict) -> dict:
         "user_id": data.get("userId"),
         "summary": _PRIVATE_PLACEHOLDER_SUMMARY,
         "raw_text": "",
+        "body_text": "",  # R3 — searchable mirror
         "filetype": data.get("fileType"),
         "created_at": data.get("uploadedAt"),
         "chunk_count": 0,
@@ -70,6 +73,7 @@ def save_media(data: dict, summary: str, embedding, raw_text: str = "", chunk_co
         "user_id": data.get("userId"),
         "summary": summary,
         "raw_text": raw_text or "",
+        "body_text": raw_text or "",  # R3 — searchable mirror
         "filetype": data.get("fileType"),
         "created_at": data.get("uploadedAt"),
         "chunk_count": int(chunk_count),

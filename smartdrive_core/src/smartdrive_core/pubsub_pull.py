@@ -52,9 +52,16 @@ def pull_and_process(handler, subscription_id: str | None = None):
         logger.info("No messages in queue.")
         return 0
 
+    # E8 — max retry count. Pub/Sub's `delivery_attempt` is set when the
+    # subscription has a dead-letter policy. Beyond MAX_RETRIES we ack the
+    # message (so Pub/Sub stops redelivering) AND mark the file `failed`
+    # permanently so the UI shows the right state instead of "processing".
+    max_retries = int(os.getenv("MAX_DELIVERY_ATTEMPTS", "3"))
+
     for rm in resp.received_messages:
         ack_id = rm.ack_id
         msg = rm.message
+        delivery_attempt = getattr(rm, "delivery_attempt", 0) or 0
 
         # Extend ack deadline upfront if processing may take time
         subscriber.modify_ack_deadline(
@@ -70,18 +77,46 @@ def pull_and_process(handler, subscription_id: str | None = None):
                 subscriber.acknowledge(request={"subscription": sub_path, "ack_ids": [ack_id]})
                 continue
 
+            # E8 — give up after MAX retries. Mark the file failed so the
+            # user sees a clear status instead of "processing" forever.
+            if delivery_attempt > max_retries:
+                logger.warning(
+                    f"Message exceeded max retries ({delivery_attempt}/{max_retries}) "
+                    f"for {data.get('fileName')} — marking failed and acking"
+                )
+                try:
+                    from smartdrive_core.mongo_status import update_status
+                    file_id = data.get("_id")
+                    if file_id:
+                        update_status(
+                            str(file_id),
+                            "failed",
+                            error=f"Extraction failed after {delivery_attempt} attempts",
+                        )
+                except Exception as inner:
+                    logger.warning(f"Failed to mark file as failed: {inner}")
+                subscriber.acknowledge(request={"subscription": sub_path, "ack_ids": [ack_id]})
+                continue
+
             handler(data)  # <-- service-specific work
 
             subscriber.acknowledge(request={"subscription": sub_path, "ack_ids": [ack_id]})
-            logger.info(f"✅ Successfully processed {data['fileName']}")
+            logger.info(
+                f"✅ Successfully processed {data['fileName']}"
+                + (f" (attempt {delivery_attempt})" if delivery_attempt > 1 else "")
+            )
 
         except json.JSONDecodeError:
             logger.error("Malformed JSON, acking (discard).")
             subscriber.acknowledge(request={"subscription": sub_path, "ack_ids": [ack_id]})
 
         except Exception as e:
-            logger.error(f"❌ Error processing message: {e}", exc_info=True)
+            logger.error(
+                f"❌ Error processing message (attempt {delivery_attempt}): {e}",
+                exc_info=True,
+            )
             # IMPORTANT: do NOT ack on transient failure -> nack by setting deadline to 0
+            # Pub/Sub will redeliver with delivery_attempt incremented.
             subscriber.modify_ack_deadline(
                 request={"subscription": sub_path, "ack_ids": [ack_id], "ack_deadline_seconds": 0}
             )
