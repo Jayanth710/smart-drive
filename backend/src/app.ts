@@ -14,6 +14,7 @@ import connectDB from "./db/mongo.js";
 import fileRouter from "./routes/file.js";
 import { requestContextMiddleware } from "./middleware/requestContext.js";
 import { csrfMiddleware } from "./middleware/csrf.js";
+import { warmupWeaviate, startWeaviateKeepalive } from "./db/weaviate_client.js";
 
 const app = express();
 const PORT = process.env.PORT || 4000;
@@ -37,6 +38,11 @@ app.use(cookieParser());
 app.use(csrfMiddleware);
 await connectDB()
 await setupPubSub();
+
+// Pre-warm Weaviate so the first user query doesn't pay TCP+TLS handshake cost.
+// Don't block startup if it fails — search will retry on the first real query.
+warmupWeaviate().catch(() => { /* logged inside */ });
+startWeaviateKeepalive();
 
 
 app.get("/", (req, res) => {

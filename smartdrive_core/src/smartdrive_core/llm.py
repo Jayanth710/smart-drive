@@ -135,14 +135,135 @@ Analyze the provided content and extract insights strictly according to the JSON
 2. 'key_insights': A list of 3-5 bullet points highlighting key insights.
 3. 'index_json':
    - 'relevant_dates': Normalize to YYYY-MM-DD where possible.
-   - 'entities': People, Companies, and Key Stakeholders.
+   - 'entities': People, Companies, and Key Stakeholders. Use canonical names
+     (e.g., "Apple Inc." not "Apple", "AAPL"; "International Business Machines"
+     not "IBM"). Deduplicate variants of the same entity.
    - 'document_ids': Invoice #s, PO #s, or Reference IDs.
    - 'technical_topics': Tech stack, products, or domain jargon.
+   - 'key_numbers': Notable numeric facts WITH a label. Examples:
+     "Q3 2024 revenue: $4.2M", "Headcount: 250", "Conversion rate: 12%".
+     Only include if the doc has concrete figures. Empty array otherwise.
+
+Write the executive_overview and key_insights in the SAME LANGUAGE as the
+input content. If content is in French, summary is in French.
 
 --- Begin Content ---
 {content}
 --- End Content ---
 """
+
+# S3 — Per-doctype prompts. Specialized prompts preserve the most important
+# content for each domain. Picked at the orchestrator level based on a cheap
+# heuristic over the first 2KB of content.
+
+_FINANCIAL_PROMPT = """You are a financial analyst summarising the provided document.
+
+Pay SPECIAL attention to:
+- Revenue, earnings, growth percentages, margins
+- Time periods (quarters, fiscal years, comparison periods)
+- Companies, investors, board members
+- Risks, guidance, forward-looking statements
+
+Same JSON schema as before, but PRESERVE EXACT NUMBERS in 'key_insights' and
+'key_numbers'. Don't paraphrase "$4.2M" as "around four million" — keep "$4.2M".
+
+Write in the source document's language.
+
+--- Begin Content ---
+{content}
+--- End Content ---
+"""
+
+_LEGAL_PROMPT = """You are a legal analyst summarising the provided document.
+
+Pay SPECIAL attention to:
+- Parties to the agreement
+- Effective dates, expiration, renewal terms
+- Obligations, restrictions, warranties
+- Governing law, jurisdiction
+- Termination conditions
+
+Same JSON schema as before. Preserve exact clause references and dates.
+DO NOT add legal opinions or interpretations — only summarise what's stated.
+
+Write in the source document's language.
+
+--- Begin Content ---
+{content}
+--- End Content ---
+"""
+
+_CODE_PROMPT = """You are a senior software engineer summarising the provided code/technical content.
+
+Pay SPECIAL attention to:
+- Public APIs, function signatures, class names
+- Technology stack, frameworks, dependencies
+- Configuration options, environment variables
+- Architectural decisions
+- Known limitations or TODOs
+
+Same JSON schema as before. Use 'technical_topics' aggressively — every
+library, language, or pattern goes there.
+
+--- Begin Content ---
+{content}
+--- End Content ---
+"""
+
+# S9 — language detection. Very simple character-based heuristic that catches
+# the common non-English cases without adding a 50MB language-detection lib.
+# Goal isn't to identify the language precisely — it's to know "is this NOT
+# English" so we can pass that signal to the LLM (which then summarizes in-language).
+def _detect_language(text: str) -> str:
+    sample = text[:2000]
+    if not sample:
+        return "en"
+    # Latin-only sample is probably English/European
+    non_ascii = sum(1 for c in sample if ord(c) > 127)
+    ratio = non_ascii / max(1, len(sample))
+    # Check specific common scripts
+    if any(0x0590 <= ord(c) <= 0x05FF for c in sample[:500]): return "he"
+    if any(0x0600 <= ord(c) <= 0x06FF for c in sample[:500]): return "ar"
+    if any(0x4E00 <= ord(c) <= 0x9FFF for c in sample[:500]): return "zh"
+    if any(0x3040 <= ord(c) <= 0x309F for c in sample[:500]): return "ja"
+    if any(0xAC00 <= ord(c) <= 0xD7AF for c in sample[:500]): return "ko"
+    if any(0x0900 <= ord(c) <= 0x097F for c in sample[:500]): return "hi"
+    if any(0x0400 <= ord(c) <= 0x04FF for c in sample[:500]): return "ru"
+    if ratio > 0.10:
+        return "non-en"  # Generic non-English with extended Latin (FR/ES/DE/etc)
+    return "en"
+
+
+# S3 — doc-type classifier. Pattern-based, super-cheap. The first 2KB usually
+# contains enough signal to route correctly. Misclassification falls back to
+# the generic prompt, so the cost of a wrong guess is minimal.
+def _detect_doc_type(text: str) -> str:
+    sample = text[:2000].lower()
+    # Code: lots of code fences or indented blocks with code-y characters.
+    if sample.count("```") >= 3 or sample.count("function ") >= 3 or sample.count("def ") >= 3:
+        return "code"
+    # Legal: characteristic phrases.
+    legal_markers = ("hereby agree", "whereas", "this agreement", "parties hereto", "governing law", "in witness whereof")
+    if sum(1 for m in legal_markers if m in sample) >= 2:
+        return "legal"
+    # Financial: revenue/margin language + dollar amounts.
+    financial_markers = ("revenue", "earnings", "fiscal", "quarter", "ebitda", "gross margin", "$")
+    if sum(1 for m in financial_markers if m in sample) >= 3:
+        return "financial"
+    return "generic"
+
+
+def _select_prompt(text: str) -> tuple[str, str]:
+    """Returns (doc_type, prompt_template). Doc-type returned so callers can
+    log/store the classification."""
+    dtype = _detect_doc_type(text)
+    if dtype == "financial":
+        return dtype, _FINANCIAL_PROMPT
+    if dtype == "legal":
+        return dtype, _LEGAL_PROMPT
+    if dtype == "code":
+        return dtype, _CODE_PROMPT
+    return dtype, _DOC_PROMPT
 
 _MERGE_PROMPT = """You are an expert Data Analyst consolidating partial summaries of a long document.
 
@@ -171,12 +292,92 @@ def _format_summary(data: dict) -> tuple[str, dict]:
     return user_summary, index_json
 
 
+# S1 — Quality check on LLM output. Catches the cases where Gemini returns
+# the schema but with garbage values (echoing the prompt, returning a question
+# instead of an answer, length too short to be useful).
+def _summary_is_bad(data: dict) -> tuple[bool, str]:
+    if not data:
+        return True, "empty"
+    overview = (data.get("executive_overview") or "").strip()
+    if len(overview) < 30:
+        return True, f"overview_too_short ({len(overview)} chars)"
+    # Models sometimes return a question back to the user instead of summarizing.
+    if overview.endswith("?") and len(overview) < 80:
+        return True, "overview_looks_like_question"
+    insights = data.get("key_insights") or []
+    if not isinstance(insights, list) or len(insights) == 0:
+        return True, "no_insights"
+    # Models occasionally echo the prompt's bullet structure as a stub.
+    if all((isinstance(i, str) and len(i.strip()) < 10) for i in insights):
+        return True, "insights_too_short"
+    return False, ""
+
+
+# S2 — Cost cap on map-reduce. A 500-page textbook → ~150 chunks → 150 LLM
+# calls = $$$. Cap at MAX_MAP_CHUNKS and flag the user that the summary
+# only covers the first portion. Better than silent runaway cost.
+MAX_MAP_CHUNKS = 30
+
+
+def _build_fallback_summary_from_partials(partials: list[dict]) -> tuple[str, dict]:
+    """When the reduce step fails, return SOMETHING useful instead of
+    just the first partial. Concatenate overviews with section markers,
+    take the union of structured fields. Loud about being a fallback.
+    """
+    overviews: list[str] = []
+    all_insights: list[str] = []
+    merged_index = _empty_index()
+    for i, p in enumerate(partials):
+        ov = (p.get("executive_overview") or "").strip()
+        if ov:
+            overviews.append(f"[Section {i + 1}] {ov}")
+        insights = p.get("key_insights") or []
+        for ins in insights:
+            if isinstance(ins, str) and ins.strip():
+                all_insights.append(ins.strip())
+        idx = p.get("index_json") or {}
+        for key in ("relevant_dates", "entities", "document_ids", "technical_topics"):
+            vals = idx.get(key) or []
+            if isinstance(vals, list):
+                merged_index[key].extend(v for v in vals if isinstance(v, str))
+
+    # Dedupe structured fields (case-insensitive, preserve order).
+    for key in merged_index:
+        seen = set()
+        deduped = []
+        for v in merged_index[key]:
+            k = v.lower().strip()
+            if k and k not in seen:
+                seen.add(k)
+                deduped.append(v)
+        merged_index[key] = deduped
+
+    # S4 — canonicalize entities so "Apple", "Apple Inc.", "AAPL" collapse to one.
+    # Cheap dedupe for short lists, LLM call only for 5-80 entities.
+    if "entities" in merged_index and len(merged_index["entities"]) >= 5:
+        merged_index["entities"] = canonicalize_entities(merged_index["entities"])
+
+    fallback_overview = (
+        "(Auto-assembled from partial summaries — reduce step degraded.)\n\n"
+        + "\n\n".join(overviews)
+    )
+    return _format_summary({
+        "executive_overview": fallback_overview,
+        "key_insights": all_insights[:8],  # cap to keep summary readable
+        "index_json": merged_index,
+    })
+
+
 def LLM_doc_summarize(text: str) -> tuple[str | None, dict | None]:
     """Summarise a document. Returns (summary, index_json) or (None, None).
 
-    Auto-switches to map-reduce when the document exceeds
-    MAP_REDUCE_TOKEN_THRESHOLD so we don't lose mid-doc content to attention
-    bias on a single huge prompt.
+    Pipeline:
+      1. Detect doc type (financial / legal / code / generic) → choose prompt
+      2. Detect language → flow through to model in chosen prompt
+      3. Single-pass for docs ≤ MAP_REDUCE_TOKEN_THRESHOLD
+      4. Map-reduce for larger docs, capped at MAX_MAP_CHUNKS chunks
+      5. Quality-check the output; one retry if bad
+      6. Reduce-step fallback: assemble partials with section markers
     """
     if not text or not text.strip():
         logger.warning("LLM_doc_summarize received empty text. Skipping API call.")
@@ -184,42 +385,222 @@ def LLM_doc_summarize(text: str) -> tuple[str | None, dict | None]:
 
     total = count_tokens(text)
 
-    if total <= MAP_REDUCE_TOKEN_THRESHOLD:
-        try:
-            data = _gemini_json(_DOC_PROMPT.format(content=text), schema=DOC_SUMMARY_SCHEMA)
-        except Exception as e:
-            logger.error(f"LLM_doc_summarize single-pass failed: {e}", exc_info=True)
-            return None, None
-        if not data:
-            return None, None
-        return _format_summary(data)
+    # S3 — pick a prompt by doc type
+    doc_type, prompt_template = _select_prompt(text)
+    # S9 — detect language (for logging; the prompt itself instructs the
+    # model to write in source language)
+    lang = _detect_language(text)
+    logger.info(f"LLM_doc_summarize: doc_type={doc_type} lang={lang} tokens={total}")
 
-    # Map-reduce path: summarise each large-ish chunk, then merge.
+    # ----- Single-pass path -----
+    if total <= MAP_REDUCE_TOKEN_THRESHOLD:
+        for attempt in (1, 2):
+            try:
+                data = _gemini_json(prompt_template.format(content=text), schema=DOC_SUMMARY_SCHEMA)
+            except Exception as e:
+                logger.error(f"LLM_doc_summarize single-pass attempt {attempt} failed: {e}", exc_info=True)
+                continue
+            if not data:
+                continue
+            is_bad, reason = _summary_is_bad(data)
+            if not is_bad:
+                return _format_summary(data)
+            logger.warning(f"summary quality check failed (attempt {attempt}): {reason} — retrying" if attempt == 1 else f"summary quality check failed twice: {reason} — accepting anyway")
+            if attempt == 2:
+                return _format_summary(data)
+        return None, None
+
+    # ----- Map-reduce path -----
     logger.info(f"LLM_doc_summarize: doc has {total} tokens > {MAP_REDUCE_TOKEN_THRESHOLD}, using map-reduce")
     map_chunks = chunk_text(text, target_tokens=4000, overlap_tokens=200)
+
+    # S2: cost cap. Truncate to first MAX_MAP_CHUNKS chunks and flag in summary.
+    truncated = len(map_chunks) > MAX_MAP_CHUNKS
+    if truncated:
+        logger.warning(
+            f"map-reduce: doc has {len(map_chunks)} chunks, capping at {MAX_MAP_CHUNKS} "
+            f"to control cost. Summary will only cover the first portion."
+        )
+        map_chunks = map_chunks[:MAX_MAP_CHUNKS]
+
     partials: list[dict] = []
     for c in map_chunks:
         try:
-            part = _gemini_json(_DOC_PROMPT.format(content=c.text), schema=DOC_SUMMARY_SCHEMA)
+            part = _gemini_json(prompt_template.format(content=c.text), schema=DOC_SUMMARY_SCHEMA)
             if part:
-                partials.append(part)
+                # Quality-check each partial too. Skip garbage partials.
+                is_bad, reason = _summary_is_bad(part)
+                if not is_bad:
+                    partials.append(part)
+                else:
+                    logger.warning(f"map-reduce chunk {c.index} produced bad summary ({reason}) — skipping")
         except Exception as e:
             logger.warning(f"map-reduce chunk {c.index} failed (skipped): {e}")
     if not partials:
         return None, None
 
-    # Reduce step. Bound the merge prompt size so we don't blow up on truly enormous docs.
+    # ----- Reduce step -----
     serialized = json.dumps(partials, ensure_ascii=False)
     serialized = truncate_to_tokens(serialized, MAP_REDUCE_TOKEN_THRESHOLD)
     try:
         merged = _gemini_json(_MERGE_PROMPT.format(content=serialized), schema=DOC_SUMMARY_SCHEMA)
     except Exception as e:
         logger.error(f"LLM_doc_summarize reduce step failed: {e}", exc_info=True)
-        # Fall back to first partial so the file isn't a total loss.
-        return _format_summary(partials[0])
-    if not merged:
-        return _format_summary(partials[0])
-    return _format_summary(merged)
+        merged = None
+
+    if merged:
+        is_bad, reason = _summary_is_bad(merged)
+        if not is_bad:
+            result = _format_summary(merged)
+            if truncated:
+                summary, idx = result
+                summary = f"⚠️ Summary covers first {MAX_MAP_CHUNKS} sections of {len(map_chunks)}-section doc.\n\n{summary}"
+                return summary, idx
+            return result
+        logger.warning(f"reduce-step summary failed quality check ({reason}) — falling back to assembled partials")
+
+    # S3: reduce failed or produced garbage. Don't silently return partials[0]
+    # (which was the first 10% of the doc). Assemble all partials properly.
+    logger.warning(f"Using assembled-partials fallback ({len(partials)} partials)")
+    return _build_fallback_summary_from_partials(partials)
+
+
+# ============================================================================
+# S2 — Per-insight embeddings
+# ============================================================================
+# Currently we embed the joined summary as one vector. Per-insight embedding
+# means embedding each key_insight separately so retrieval can match specific
+# facts (e.g. "Q3 revenue was $4.2M") instead of fuzzy-averaging across all
+# insights in one vector. The caller (chat-prep / save_doc) decides whether
+# to use the per-insight vectors as additional Weaviate rows.
+
+def embed_insights(index_json: dict, insights: list[str]) -> list[tuple[str, list[float]]]:
+    """Return [(insight_text, embedding), ...] for each non-empty insight.
+    Caller can store these as separate Weaviate rows for fine-grained
+    retrieval. Falls back to empty list if embedding fails."""
+    if not insights:
+        return []
+    # Add domain context to short insights so embeddings have more signal.
+    entities = (index_json or {}).get("entities") or []
+    domain_hint = " (entities: " + ", ".join(entities[:3]) + ")" if entities else ""
+    enriched = [f"{i.strip()}{domain_hint}" for i in insights if isinstance(i, str) and i.strip()]
+    if not enriched:
+        return []
+    try:
+        vectors = get_embeddings_batch(enriched)
+        out: list[tuple[str, list[float]]] = []
+        for original, vec in zip(insights, vectors):
+            if vec and isinstance(original, str) and original.strip():
+                out.append((original.strip(), vec))
+        return out
+    except Exception as e:
+        logger.warning(f"embed_insights failed: {e}")
+        return []
+
+
+# ============================================================================
+# S4 — Entity canonicalization
+# ============================================================================
+# Apple/Apple Inc/AAPL all currently stored as distinct entities. This step
+# uses a tiny LLM call to canonicalize a list of entity strings into one
+# representative form per real entity. Bounded cost (single call) and only
+# runs when entity list is long enough to be worth it.
+
+_CANON_PROMPT = """Group these entity strings by which ones refer to the SAME real-world entity.
+For each group, pick the most canonical form (full official name preferred).
+
+Output JSON: {"groups": [{"canonical": "Apple Inc.", "variants": ["Apple", "AAPL", "Apple Inc"]}, ...]}
+
+Entity strings (one per line):
+{content}
+"""
+
+_CANON_SCHEMA = {
+    "type": "OBJECT",
+    "properties": {
+        "groups": {
+            "type": "ARRAY",
+            "items": {
+                "type": "OBJECT",
+                "properties": {
+                    "canonical": {"type": "STRING"},
+                    "variants": {"type": "ARRAY", "items": {"type": "STRING"}},
+                },
+                "required": ["canonical", "variants"],
+            },
+        },
+    },
+    "required": ["groups"],
+}
+
+
+def canonicalize_entities(entities: list[str]) -> list[str]:
+    """Return entities deduplicated by canonical form. Skips the LLM call
+    when the list is too small to benefit (< 5 entities) or too large to
+    fit comfortably (> 80 entities)."""
+    if not entities:
+        return []
+    cleaned = [e.strip() for e in entities if isinstance(e, str) and e.strip()]
+    if len(cleaned) < 5 or len(cleaned) > 80:
+        # Just dedupe case-insensitively for small lists; skip LLM.
+        seen = set()
+        out = []
+        for e in cleaned:
+            k = e.lower()
+            if k not in seen:
+                seen.add(k)
+                out.append(e)
+        return out
+    try:
+        content = "\n".join(cleaned)
+        result = _gemini_json(_CANON_PROMPT.format(content=content), schema=_CANON_SCHEMA, max_tokens=2048)
+        if not result or not isinstance(result.get("groups"), list):
+            return cleaned
+        return [g["canonical"] for g in result["groups"] if g.get("canonical")]
+    except Exception as e:
+        logger.warning(f"canonicalize_entities failed (returning raw list): {e}")
+        return cleaned
+
+
+# ============================================================================
+# S10 — Multi-level summaries
+# ============================================================================
+# Three abstraction levels generated from one LLM call. Useful for different
+# UI surfaces (file card shows short, file drawer shows medium, deep view
+# shows detailed). Saves the cost of re-summarizing.
+
+_MULTI_LEVEL_SCHEMA = {
+    "type": "OBJECT",
+    "properties": {
+        "short": {"type": "STRING", "description": "1-sentence gist, ≤ 200 chars"},
+        "medium": {"type": "STRING", "description": "2-3 sentences, ≤ 600 chars"},
+        "detailed": {"type": "STRING", "description": "4-6 sentences with concrete details, ≤ 1500 chars"},
+    },
+    "required": ["short", "medium", "detailed"],
+}
+
+_MULTI_LEVEL_PROMPT = """Summarize this content at three different levels of detail.
+Write in the source content's language. Be concrete — use specific names, numbers, dates.
+
+--- Content ---
+{content}
+--- End ---
+"""
+
+
+def LLM_multi_level_summary(text: str) -> dict | None:
+    """Returns {'short', 'medium', 'detailed'} or None on failure.
+    One LLM call. Cheaper than calling LLM_doc_summarize 3 times.
+    """
+    if not text or not text.strip():
+        return None
+    # Cap input to keep the prompt small.
+    truncated = truncate_to_tokens(text, 6000)
+    try:
+        return _gemini_json(_MULTI_LEVEL_PROMPT.format(content=truncated), schema=_MULTI_LEVEL_SCHEMA, max_tokens=1024)
+    except Exception as e:
+        logger.warning(f"LLM_multi_level_summary failed: {e}")
+        return None
 
 
 def LLM_doc_summarizer(text: str):

@@ -103,6 +103,14 @@ DOC_SUMMARY_SCHEMA = {
                 "entities": {"type": "ARRAY", "items": {"type": "STRING"}},
                 "document_ids": {"type": "ARRAY", "items": {"type": "STRING"}},
                 "technical_topics": {"type": "ARRAY", "items": {"type": "STRING"}},
+                # S8 — Numerical highlights: actual figures from the document.
+                # Optional (only filled when the doc has notable numbers).
+                # Each entry: "label: value unit" e.g. "Q3 revenue: $4.2M".
+                "key_numbers": {
+                    "type": "ARRAY",
+                    "items": {"type": "STRING"},
+                    "description": "Key numeric facts (revenue, dates, counts, percentages) with label. Empty if doc has none.",
+                },
             },
             "required": ["relevant_dates", "entities", "document_ids", "technical_topics"]
         },

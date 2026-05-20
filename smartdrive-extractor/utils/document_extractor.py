@@ -3,6 +3,7 @@ import logging
 from .docling import extract_content
 from smartdrive_core.llm import LLM_doc_summarize, get_embedding
 from smartdrive_core.metrics import stage_timer
+from smartdrive_core.mongo_status import update_progress
 from .weaviate_utils import save_doc, save_doc_private
 
 logger = logging.getLogger(__name__)
@@ -32,6 +33,7 @@ def process_document(file_path: str, data: dict) -> dict:
         }
 
     # ---- extract ----
+    update_progress(file_id, "Extracting text and tables", 1, 4)
     with stage_timer("extract", file_id=file_id):
         res = extract_content(file_path)
     if not res or not res.get("created"):
@@ -42,12 +44,14 @@ def process_document(file_path: str, data: dict) -> dict:
         return {"message": f"No text extracted for {filename}", "created": False, "error_kind": "no_content"}
 
     # ---- summarise ----
+    update_progress(file_id, "Summarizing with AI", 2, 4)
     with stage_timer("summarize", file_id=file_id, chars=len(markdown)):
         summary, index_json = LLM_doc_summarize(markdown)
     if not summary:
         return {"message": "Failed to generate summary", "created": False, "error_kind": "llm_failed"}
 
     # ---- embed summary only (file-level vector for cross-file search) ----
+    update_progress(file_id, "Embedding for search", 3, 4)
     summary_embed_text = f"{summary}\n\nKeywords: {index_json}"
     with stage_timer("embed_summary", file_id=file_id):
         summary_vector = get_embedding(summary_embed_text)
@@ -55,6 +59,7 @@ def process_document(file_path: str, data: dict) -> dict:
         return {"message": "Failed to embed summary", "created": False, "error_kind": "embedding_failed"}
 
     # ---- save summary row with raw_text (used later for lazy chat prep) ----
+    update_progress(file_id, "Indexing", 4, 4)
     with stage_timer("save_summary", file_id=file_id):
         save_doc(
             data,

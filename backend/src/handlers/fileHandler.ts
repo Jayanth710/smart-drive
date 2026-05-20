@@ -21,6 +21,14 @@ const capHistory = (history: ChatTurn[] | undefined): ChatTurn[] => {
     return valid.slice(-HISTORY_TURN_CAP);
 };
 
+// Personalization: bump access count + recency on file interaction. Fire-and-forget.
+const touchFileAccess = (fileId: string): void => {
+    UserFile.updateOne(
+        { _id: fileId },
+        { $inc: { accessCount: 1 }, $set: { lastAccessedAt: new Date() } },
+    ).catch((err) => logger.warn(`touchFileAccess fileId=${fileId} failed: ${err}`));
+};
+
 const getUserFile = (fileRecord: UserFileType | null) => {
     const filePath = `${fileRecord?.userId}/${fileRecord?.fileHash}`;
     return bucket.file(filePath);
@@ -90,6 +98,7 @@ const generateFileSignedUrl = async (req: AuthenticatedRequest, res: Response): 
         }
 
         const [url] = await file.getSignedUrl(options);
+        touchFileAccess(fileId); // R6 personalization signal
         res.status(200).json({ url });
         return
 
@@ -269,6 +278,7 @@ const prepareChat = async (req: AuthenticatedRequest, res: Response): Promise<vo
             res.status(409).json({ message: result.reason });
             return;
         }
+        touchFileAccess(fileId); // R6 personalization signal
         res.status(200).json(result);
     } catch (err) {
         logger.error(`prepareChat failed for fileId=${fileId}:`, err);

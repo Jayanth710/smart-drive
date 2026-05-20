@@ -45,6 +45,11 @@ DOC_PROPERTIES = [
     wvc.config.Property(name="user_id", data_type=wvc.config.DataType.TEXT),
     wvc.config.Property(name="summary", data_type=wvc.config.DataType.TEXT),
     wvc.config.Property(name="raw_text", data_type=wvc.config.DataType.TEXT, index_searchable=False),
+    # R3 — searchable body text. raw_text was marked index_searchable=False
+    # (storage-only), which silently broke BM25 over body content for files
+    # without chunks. We add a searchable mirror; backend uses this for
+    # body-text BM25 queries. Auto-populated alongside raw_text below.
+    wvc.config.Property(name="body_text", data_type=wvc.config.DataType.TEXT, index_searchable=True),
     wvc.config.Property(name="filename", data_type=wvc.config.DataType.TEXT),
     wvc.config.Property(name="filetype", data_type=wvc.config.DataType.TEXT),
     wvc.config.Property(name="created_at", data_type=wvc.config.DataType.DATE, index_filterable=True),
@@ -77,6 +82,8 @@ IMG_PROPERTIES = [
     wvc.config.Property(name="user_id", data_type=wvc.config.DataType.TEXT),
     wvc.config.Property(name="summary", data_type=wvc.config.DataType.TEXT),
     wvc.config.Property(name="raw_text", data_type=wvc.config.DataType.TEXT, index_searchable=False),
+    # R3 — searchable body mirror (see DOC_PROPERTIES for explanation).
+    wvc.config.Property(name="body_text", data_type=wvc.config.DataType.TEXT, index_searchable=True),
     wvc.config.Property(name="filename", data_type=wvc.config.DataType.TEXT),
     wvc.config.Property(name="filetype", data_type=wvc.config.DataType.TEXT),
     wvc.config.Property(name="created_at", data_type=wvc.config.DataType.DATE, index_filterable=True),
@@ -114,6 +121,7 @@ def save_doc_private(data):
         "user_id": data["userId"],
         "summary": _PRIVATE_PLACEHOLDER_SUMMARY,
         "raw_text": "",
+        "body_text": "",  # R3 — searchable mirror (empty for private/stub files)
         "index_json": "{}",
         "filetype": data.get("fileType"),
         "created_at": data.get("uploadedAt"),
@@ -136,6 +144,7 @@ def save_doc(data, summary, index_json, embedding, raw_text: str = "", chunk_cou
         "user_id": data["userId"],
         "summary": summary,
         "raw_text": raw_text or "",
+        "body_text": raw_text or "",  # R3 — searchable mirror
         "index_json": json.dumps(idx, ensure_ascii=False),
         "filetype": data.get("fileType"),
         "created_at": data.get("uploadedAt"),
@@ -186,6 +195,7 @@ def save_image_private(data):
         "user_id": data["userId"],
         "summary": _PRIVATE_PLACEHOLDER_SUMMARY,
         "raw_text": "",
+        "body_text": "",  # R3 — searchable mirror (empty for private/stub files)
         "filetype": data.get("fileType"),
         "created_at": data.get("uploadedAt"),
         "processing_type": "private",
@@ -202,6 +212,7 @@ def save_image(data, summary, embedding, processing_type, raw_text: str = "", ch
         "user_id": data["userId"],
         "summary": summary,
         "raw_text": raw_text or "",
+        "body_text": raw_text or "",  # R3 — searchable mirror
         "filetype": data.get("fileType"),
         "created_at": data.get("uploadedAt"),
         "processing_type": processing_type,

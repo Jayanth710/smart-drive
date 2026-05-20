@@ -80,6 +80,9 @@ export interface UploadItem {
     extraction_error?: string;
     index_json?: IndexJson;
     is_private?: boolean;
+    /** Live extraction progress reported by the worker. Present only while
+     *  status is pending/processing. e.g. { current: 2, total: 4, stage: "Summarizing with AI" } */
+    extraction_progress?: { current?: number; total?: number; stage?: string } | null;
 
     /** Set by the search endpoint: the chunk text that scored highest against
      *  the user's query. Surfaced on the card so users know *why* a file matched. */
@@ -207,7 +210,13 @@ function typeAccent(filetype: string) {
     };
 }
 
-function ExtractionBadge({ status }: { status: ExtractionStatus | undefined }) {
+function ExtractionBadge({
+    status,
+    progress,
+}: {
+    status: ExtractionStatus | undefined;
+    progress?: { current?: number; total?: number; stage?: string } | null;
+}) {
     const s = status ?? 'done';
     if (s === 'done') {
         return (
@@ -225,11 +234,21 @@ function ExtractionBadge({ status }: { status: ExtractionStatus | undefined }) {
             </Badge>
         );
     }
-    // pending or processing
+    // pending or processing — show live stage if the worker is reporting it
+    const stage = progress?.stage?.trim();
+    const cur = progress?.current ?? 0;
+    const total = progress?.total ?? 0;
+    const showStage = s === 'processing' && stage && total > 0;
     return (
-        <Badge variant="outline" className="gap-1 text-amber-700 border-amber-300">
-            <IconLoader2 size={12} className="animate-spin" />
-            {s === 'pending' ? 'Queued' : 'Processing'}
+        <Badge
+            variant="outline"
+            className="gap-1 text-amber-700 border-amber-300 max-w-[220px]"
+            title={showStage ? `${stage} (${cur}/${total})` : undefined}
+        >
+            <IconLoader2 size={12} className="animate-spin shrink-0" />
+            <span className="truncate">
+                {showStage ? `${stage} (${cur}/${total})` : (s === 'pending' ? 'Queued' : 'Processing')}
+            </span>
         </Badge>
     );
 }
@@ -580,7 +599,10 @@ function FileCard({
 
                     {/* Status row */}
                     <div className="flex items-center gap-2 flex-wrap">
-                        <ExtractionBadge status={file.extraction_status} />
+                        <ExtractionBadge
+                            status={file.extraction_status}
+                            progress={file.extraction_progress}
+                        />
                     </div>
 
                     {/* Hero summary — 3 lines, soft fade-out for overflow */}
@@ -1235,7 +1257,10 @@ export function FileListWithDrawer({
                                         {fileTypeLabel(file.filetype)} · {formatRelative(file.created_at)}
                                     </div>
                                 </div>
-                                <ExtractionBadge status={file.extraction_status} />
+                                <ExtractionBadge
+                            status={file.extraction_status}
+                            progress={file.extraction_progress}
+                        />
                                 <DropdownMenu>
                                     <DropdownMenuTrigger asChild>
                                         <button
