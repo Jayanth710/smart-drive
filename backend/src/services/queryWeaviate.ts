@@ -24,13 +24,6 @@ const chunkCollections: Record<string, string> = {
     Media: "SmartDriveMediaChunks",
 };
 
-type ScoredHit = {
-    file_id: string;
-    score: number;
-    properties: Record<string, unknown>;
-    matched_chunk?: string;
-};
-
 // ---------- RRF fusion ----------
 // Reciprocal Rank Fusion. Each signal contributes weight · (1 / (k + rank))
 // per file. Multi-signal matches naturally score higher than single-signal
@@ -510,13 +503,6 @@ const queryWeaviate = async (userId: string, userQuery: string, queryCollection:
         // This rewards files matched by multiple signals — exactly the "the
         // file we're looking for shows up in chunks AND filename AND summary"
         // case that max-fusion missed.
-        type Fused = {
-            file_id: string;
-            score: number;
-            properties: Record<string, unknown>;
-            matched_chunk?: string;
-            matched_in: string[];
-        };
         // R6 — fetch personalization data (accessCount, lastAccessedAt) for
         // candidate files in one Mongo round-trip. Skipped if no signals fired.
         const candidateIds = [...fileSignals.keys()];
