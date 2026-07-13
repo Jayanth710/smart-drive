@@ -123,6 +123,65 @@ def update_progress(file_id: str, stage: str, current: int = 0, total: int = 0) 
         return False
 
 
+def increment_attempt_and_check(file_id: str, max_attempts: int) -> tuple[int, bool]:
+    """Atomically increment the self-tracked `extractionAttempts` counter and
+    report whether it has now exceeded `max_attempts`.
+
+    Why self-tracked instead of relying on Pub/Sub's `delivery_attempt`:
+    that field is ONLY populated when the subscription has a dead-letter
+    policy configured. Without one (the common case unless explicitly set
+    up), `delivery_attempt` is always 0 and any cap based on it silently
+    never triggers — the exact bug that caused an infinite retry loop here.
+    A counter we own works regardless of subscription configuration.
+
+    Returns (attempt_count_after_increment, exceeded).
+    Fails open (0, False) on any Mongo error — never block real processing
+    because status-tracking hiccupped.
+    """
+    if not file_id:
+        return (0, False)
+    collection = _get_collection()
+    if collection is None:
+        return (0, False)
+    try:
+        from bson import ObjectId
+        oid = ObjectId(file_id)
+    except Exception:
+        return (0, False)
+    try:
+        from pymongo import ReturnDocument
+        doc = collection.find_one_and_update(
+            {"_id": oid},
+            {"$inc": {"extractionAttempts": 1}, "$set": {"updatedAt": datetime.now(timezone.utc)}},
+            return_document=ReturnDocument.AFTER,
+            projection={"extractionAttempts": 1},
+        )
+        if not doc:
+            return (0, False)
+        count = int(doc.get("extractionAttempts", 1))
+        return (count, count > max_attempts)
+    except Exception as e:
+        logger.warning(f"increment_attempt_and_check({file_id}) failed: {e}")
+        return (0, False)
+
+
+def reset_attempts(file_id: str) -> None:
+    """Clear the attempt counter. Called whenever a file is explicitly
+    re-queued (manual retry, privacy toggle) so it gets a fresh budget
+    instead of inheriting a stale count from a previous failure run."""
+    if not file_id:
+        return
+    collection = _get_collection()
+    if collection is None:
+        return
+    try:
+        from bson import ObjectId
+        oid = ObjectId(file_id)
+        collection.update_one({"_id": oid}, {"$set": {"extractionAttempts": 0}})
+    except Exception as e:
+        logger.warning(f"reset_attempts({file_id}) failed: {e}")
+
+
 def sweep_orphaned_files(stale_minutes: int = 10) -> int:
     """Find files stuck in `processing` for too long (worker died mid-extraction
     from OOM, timeout, deploy, etc.) and reset them to `pending` so they get

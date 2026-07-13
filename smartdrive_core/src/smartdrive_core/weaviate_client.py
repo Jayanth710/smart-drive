@@ -63,6 +63,20 @@ def _get_collection(collection_name: str):
         _collections[collection_name] = col
     return col
 
+def _build_vector_index_config():
+    """Weaviate Cloud plans differ in which vector index types they allow:
+      - Standard plans: hnsw (default)
+      - Serverless/hobby plans: only hfresh (managed by Weaviate)
+    Client-side we can't specify hfresh directly — it's server-selected.
+    `Configure.VectorIndex.dynamic()` tells the server "you pick" and works
+    across plans. Fall back to None (server default) if the SDK version
+    doesn't expose dynamic()."""
+    try:
+        return wvc.config.Configure.VectorIndex.dynamic()
+    except AttributeError:
+        return None
+
+
 def ensure_collection(collection_name: str, properties: list[wvc.config.Property]):
     client = get_weaviate_client()
     if client.collections.exists(collection_name):
@@ -72,11 +86,35 @@ def ensure_collection(collection_name: str, properties: list[wvc.config.Property
         return
 
     logger.info(f"Creating collection '{collection_name}'...")
-    client.collections.create(
-        name=collection_name,
-        properties=properties,
-        vectorizer_config=wvc.config.Configure.Vectorizer.none(),
-    )
+
+    # Try the plan-adaptive vector index first, then fall back to server
+    # default if that gets rejected. Servers that require hfresh reject
+    # anything else with 422; catching lets us retry cleanly.
+    create_kwargs = {
+        "name": collection_name,
+        "properties": properties,
+        "vectorizer_config": wvc.config.Configure.Vectorizer.none(),
+    }
+    vic = _build_vector_index_config()
+    if vic is not None:
+        create_kwargs["vector_index_config"] = vic
+
+    try:
+        client.collections.create(**create_kwargs)
+    except Exception as e:
+        msg = str(e).lower()
+        # If the cluster rejects our explicit vector_index_config, retry
+        # without one and let the server pick its default.
+        if "not allowed" in msg and "vector_index_type" in msg:
+            logger.warning(
+                f"Cluster rejected explicit vector index config for '{collection_name}' "
+                f"({e}). Retrying with server default (hfresh)."
+            )
+            create_kwargs.pop("vector_index_config", None)
+            client.collections.create(**create_kwargs)
+        else:
+            raise
+
     logger.info(f"Collection '{collection_name}' created.")
 
 
@@ -98,6 +136,18 @@ def _ensure_properties(collection_name: str, properties: list[wvc.config.Propert
         logger.warning(f"_ensure_properties for {collection_name} failed: {e}")
 
 def check_file_exists(collection_name: str, file_id: str, user_id: str) -> bool:
+    # Cheap upfront check: if the collection doesn't exist yet, there's no
+    # file to find and no need to query. Prevents a noisy GRPC UNKNOWN
+    # traceback on first-ever ingestion into a fresh cluster.
+    try:
+        client = get_weaviate_client()
+        if not client.collections.exists(collection_name):
+            logger.info(f"check_file_exists: collection '{collection_name}' doesn't exist yet")
+            return False
+    except Exception as e:
+        logger.warning(f"check_file_exists preflight failed: {e}")
+        # Fall through to the query; may still succeed.
+
     try:
         col = _get_collection(collection_name)
         filters = Filter.all_of([
@@ -107,8 +157,7 @@ def check_file_exists(collection_name: str, file_id: str, user_id: str) -> bool:
         resp = col.query.fetch_objects(limit=1, filters=filters)
         return bool(resp and resp.objects)
     except Exception as e:
-        logger.error(f"check_file_exists failed: {e}", exc_info=True)
-        # If exists-check fails, return False so pipeline can proceed (or you can return True to be conservative)
+        logger.warning(f"check_file_exists query failed (treating as absent): {e}")
         return False
 
 def upload(collection_name: str, properties_to_save: dict, embedding: list[float]) -> dict:

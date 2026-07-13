@@ -25,6 +25,13 @@ export interface UserFileType extends mongoose.Document {
     /** Extraction progress for UI ("extracting page 3 of 12"). Worker
      *  updates this periodically during processing. Cleared when status='done'. */
     extractionProgress?: { current: number; total: number; stage: string } | null;
+    /** Self-tracked retry counter, incremented by the worker on each Pub/Sub
+     *  delivery. Once it exceeds MAX_DELIVERY_ATTEMPTS the worker marks the
+     *  file 'failed' and stops redelivery — prevents infinite retry loops
+     *  when the subscription has no dead-letter policy configured (Pub/Sub's
+     *  own delivery_attempt field is 0 in that case and can't be used).
+     *  Reset to 0 whenever the backend explicitly re-queues extraction. */
+    extractionAttempts?: number;
     createdAt: Date;
     updatedAt: Date;
 }
@@ -78,6 +85,7 @@ const userFileSchema = new mongoose.Schema(
             total: { type: Number, default: 0 },
             stage: { type: String, default: "" },
         },
+        extractionAttempts: { type: Number, default: 0 },
     },
     {
         timestamps: true,
