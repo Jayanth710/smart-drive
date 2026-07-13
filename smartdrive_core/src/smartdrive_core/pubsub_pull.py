@@ -52,16 +52,16 @@ def pull_and_process(handler, subscription_id: str | None = None):
         logger.info("No messages in queue.")
         return 0
 
-    # E8 — max retry count. Pub/Sub's `delivery_attempt` is set when the
-    # subscription has a dead-letter policy. Beyond MAX_RETRIES we ack the
-    # message (so Pub/Sub stops redelivering) AND mark the file `failed`
-    # permanently so the UI shows the right state instead of "processing".
+    # E8 — max retry count, self-tracked in Mongo (NOT via Pub/Sub's
+    # `delivery_attempt` — that field is only populated when the subscription
+    # has a dead-letter policy configured; without one it's always 0 and any
+    # cap based on it silently never fires, which is what caused the
+    # infinite-retry loop this replaces).
     max_retries = int(os.getenv("MAX_DELIVERY_ATTEMPTS", "3"))
 
     for rm in resp.received_messages:
         ack_id = rm.ack_id
         msg = rm.message
-        delivery_attempt = getattr(rm, "delivery_attempt", 0) or 0
 
         # Extend ack deadline upfront if processing may take time
         subscriber.modify_ack_deadline(
@@ -77,33 +77,32 @@ def pull_and_process(handler, subscription_id: str | None = None):
                 subscriber.acknowledge(request={"subscription": sub_path, "ack_ids": [ack_id]})
                 continue
 
-            # E8 — give up after MAX retries. Mark the file failed so the
-            # user sees a clear status instead of "processing" forever.
-            if delivery_attempt > max_retries:
-                logger.warning(
-                    f"Message exceeded max retries ({delivery_attempt}/{max_retries}) "
-                    f"for {data.get('fileName')} — marking failed and acking"
-                )
-                try:
-                    from smartdrive_core.mongo_status import update_status
-                    file_id = data.get("_id")
-                    if file_id:
-                        update_status(
-                            str(file_id),
-                            "failed",
-                            error=f"Extraction failed after {delivery_attempt} attempts",
-                        )
-                except Exception as inner:
-                    logger.warning(f"Failed to mark file as failed: {inner}")
-                subscriber.acknowledge(request={"subscription": sub_path, "ack_ids": [ack_id]})
-                continue
+            # E8 — self-tracked attempt counter. Increment BEFORE processing
+            # so a crash mid-handler (OOM, timeout) still counts as an attempt.
+            file_id = data.get("_id")
+            attempt_count = 0
+            if file_id:
+                from smartdrive_core.mongo_status import increment_attempt_and_check, update_status
+                attempt_count, exceeded = increment_attempt_and_check(str(file_id), max_retries)
+                if exceeded:
+                    logger.warning(
+                        f"File {file_id} ('{data.get('fileName')}') exceeded max attempts "
+                        f"({attempt_count}/{max_retries}) — marking failed and acking to stop redelivery"
+                    )
+                    update_status(
+                        str(file_id),
+                        "failed",
+                        error=f"Extraction failed after {attempt_count} attempts",
+                    )
+                    subscriber.acknowledge(request={"subscription": sub_path, "ack_ids": [ack_id]})
+                    continue
 
             handler(data)  # <-- service-specific work
 
             subscriber.acknowledge(request={"subscription": sub_path, "ack_ids": [ack_id]})
             logger.info(
                 f"✅ Successfully processed {data['fileName']}"
-                + (f" (attempt {delivery_attempt})" if delivery_attempt > 1 else "")
+                + (f" (attempt {attempt_count})" if attempt_count > 1 else "")
             )
 
         except json.JSONDecodeError:
@@ -111,12 +110,9 @@ def pull_and_process(handler, subscription_id: str | None = None):
             subscriber.acknowledge(request={"subscription": sub_path, "ack_ids": [ack_id]})
 
         except Exception as e:
-            logger.error(
-                f"❌ Error processing message (attempt {delivery_attempt}): {e}",
-                exc_info=True,
-            )
+            logger.error(f"❌ Error processing message: {e}", exc_info=True)
             # IMPORTANT: do NOT ack on transient failure -> nack by setting deadline to 0
-            # Pub/Sub will redeliver with delivery_attempt incremented.
+            # Pub/Sub will redeliver; our own counter (incremented above) caps retries.
             subscriber.modify_ack_deadline(
                 request={"subscription": sub_path, "ack_ids": [ack_id], "ack_deadline_seconds": 0}
             )

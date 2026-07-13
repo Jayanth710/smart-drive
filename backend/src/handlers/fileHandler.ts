@@ -224,9 +224,12 @@ const triggerExtraction = async (req: AuthenticatedRequest, res: Response): Prom
         // Reset state so the UI immediately reflects "queued" — even before
         // the worker picks the message up. Also flush the cached chat index:
         // a re-extracted file should be chunked from the new text, not the old.
+        // Reset extractionAttempts too — a manual retry deserves a fresh
+        // budget, not to inherit a stale count from the previous failure run.
         fileRecord.extractionStatus = 'pending';
         fileRecord.extractionError = undefined;
         fileRecord.chatReady = false;
+        fileRecord.extractionAttempts = 0;
         await fileRecord.save();
         // Best-effort: wipe per-chunk vectors so the next chat re-prepares them.
         wipeChunksForFile(userId, fileId).catch((err) =>
@@ -324,6 +327,7 @@ const togglePrivacy = async (req: AuthenticatedRequest, res: Response): Promise<
         file.isPrivate = isPrivate;
         file.extractionStatus = 'pending';
         file.chatReady = false;
+        file.extractionAttempts = 0;
         await file.save();
 
         await publishFileMetadata(file);
